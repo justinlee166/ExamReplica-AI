@@ -19,15 +19,15 @@
 \section{Overview}
 ExamProfile AI is a STEM-focused, web-first application for exam simulation and weakness analytics. It ingests course materials such as lecture slides, homework sets, and prior exams to generate course-specific practice problem sheets, simulated exams, and answer keys. The primary delivery surface is intended to be a web application, while keeping product language flexible enough to support a desktop client in the future.
 
-Unlike generic AI study tools, ExamProfile AI builds a structured \textbf{Professor Profile}: an evidence-weighted model of instructor tendencies and course assessment patterns (e.g., recurring topics, typical question formats, structure, and approximate difficulty). Topic emphasis is treated as informative rather than deterministic; if course evidence strongly emphasizes a topic (such as probability), generated exams should generally reflect that tendency while preserving realistic variety. Stronger evidence signals (e.g., past exams, practice tests, explicit instructor guidance, or user-provided prompts/comments) are intended to be weighted more heavily than weak signals (e.g., a single homework problem).
+Unlike generic AI study tools, ExamProfile AI builds a structured \textbf{Professor Profile}: an evidence-weighted model of instructor tendencies and course assessment patterns (e.g., recurring topics, typical question formats, exam structure, and estimated difficulty tendencies). Topic emphasis is treated as informative rather than deterministic; if course evidence strongly emphasizes a topic (such as probability), generated exams should generally reflect that tendency while preserving realistic variety. Stronger evidence signals (e.g., past exams, practice tests, explicit instructor guidance, or user-provided prompts/comments) are intended to be weighted more heavily than weak signals (e.g., a single homework problem).
 
 Generation and evaluation are intended to be multi-stage and quality-controlled (generation, review, validation, and refinement), rather than a one-shot ``generate an exam'' prompt. Students submit answers and receive diagnostically useful feedback (not only correct/incorrect), including structured error classifications that support concept-level weakness analytics and targeted follow-up practice.
 
 \section{Problem}
-Students preparing for exams face two major issues:
+Students preparing for exams face several recurring issues:
 
 \begin{itemize}
-\item Generic AI-generated practice is rarely course-specific: it does not reliably reflect an instructor's exam structure, pacing, grading style, or concept emphasis inferred from real course materials.
+\item Generic AI-generated practice is rarely course-specific; it does not reliably reflect an instructor's exam structure, pacing, grading style, or concept emphasis as inferred from real course materials.
 \item Typical LLM study tools often produce shallow variants that restate known problems with minor wording or numeric changes, which does not adequately prepare students for new but conceptually aligned exam questions.
 \item Existing tools frequently fail to reproduce realistic exam construction (e.g., section structure, question-type distribution, and difficulty progression) and may generate multiple-choice questions with repetitive or predictable answer-position patterns.
 \item Feedback is commonly limited to correctness labels or generic explanations and is not diagnostically structured (e.g., it does not identify wrong method selection versus formula misuse versus computation versus interpretation errors).
@@ -41,7 +41,7 @@ The goal of ExamProfile AI is to create a system that:
 \item Ingests real course materials to learn course scope and assessment patterns
 \item Builds and maintains a structured, evidence-weighted Professor Profile that informs (but does not rigidly dictate) generation
 \item Produces simulated exams and practice sets that are intended to be novel-but-aligned with instructor style, structure, and concept emphasis (avoiding obvious paraphrases unless explicitly requested)
-\item Grades submissions with diagnostically useful, structured feedback beyond correct/incorrect, surfacing what was correct, what method was misapplied, and which conceptual weakness is indicated
+\item Grades submissions with diagnostically useful, structured feedback beyond correct/incorrect, identifying what was correct, which method was misapplied, and what conceptual weakness is suggested
 \item Iterates a preparation loop: ingest materials $\rightarrow$ model tendencies $\rightarrow$ generate practice $\rightarrow$ diagnose performance $\rightarrow$ update weakness signals $\rightarrow$ regenerate targeted practice
 \item Uses a multi-stage generation, review, validation, and refinement pipeline to improve realism and reduce brittle one-shot outputs (later sections specify these mechanisms in detail)
 \end{itemize}
@@ -52,7 +52,7 @@ The system is designed to operate as an \textbf{exam simulation engine} grounded
 Primary users include:
 \begin{itemize}
 \item College students in quantitative, structured STEM courses preparing for midterms and finals
-\item Students who can provide course evidence (slides, homework, prior exams) and want course-specific, professor-aligned exam simulation
+\item Students who can provide course materials (slides, homework, prior exams) and want course-specific, professor-aligned exam simulation
 \item Students who need diagnostically structured feedback on methods, formulas, and reasoning patterns (not only correctness labels)
 \end{itemize}
 
@@ -69,16 +69,19 @@ The initial focus is optimized for structured, quantifiable subjects where metho
 
 \section{Key Differentiators}
 \begin{enumerate}
-\item \textbf{Professor Modeling} \\
-Builds a structured Professor Profile capturing instructor tendencies and course patterns (topic emphasis, question-type distribution, structure, and approximate difficulty), using an evidence-weighted approach that prioritizes stronger signals (e.g., past exams) when available.
+\item \textbf{Professor Modeling}
+Builds a structured Professor Profile capturing instructor tendencies and course patterns (topic emphasis, question-type distribution, exam structure, and estimated difficulty tendencies), using an evidence-weighted approach that prioritizes stronger signals (e.g., past exams) when available.
 
-\item \textbf{Distribution-Aware Exam Generation} \\
+\item \textbf{Distribution-Aware Exam Generation}
 Generates simulated exams informed by observed topic emphasis and structure without mechanically matching exact topic percentages. The system aims to create new, non-trivially distinct questions that are aligned with instructor style and avoids shallow paraphrases by default. For multiple-choice questions, generation aims for intentionally balanced, realistic construction (including avoiding repetitive or predictable answer-position patterns).
 
-\item \textbf{Scope-Aware Filtering} \\
+\item \textbf{Multi-Stage Quality-Controlled Generation}
+Uses a layered generation pipeline rather than a single LLM call. Draft questions and exams can be reviewed, validated, and refined before delivery to improve reliability and to reduce shallow reformulations and recurring formatting artifacts.
+
+\item \textbf{Scope-Aware Filtering}
 Supports constraints such as ``Only review Notes 3--8'' or ``Focus on hypothesis testing'' to prevent out-of-scope generation and to focus practice on a defined portion of the course.
 
-\item \textbf{Concept-Level Weakness Analytics} \\
+\item \textbf{Concept-Level Weakness Analytics}
 Provides diagnostically structured grading signals (e.g., wrong method selection, formula misuse, computational mistakes, interpretation errors) to identify concept-level weaknesses. Weakness analytics guide targeted regeneration of follow-up practice, reinforcing the exam-preparation loop rather than producing one-off problem sets.
 \end{enumerate}
 
