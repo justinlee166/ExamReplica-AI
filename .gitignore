@@ -9,6 +9,13 @@ __v0_jsx-dev-runtime.ts
 # Common ignores
 node_modules/
 .next/
+.env
+.env.*
+venv/
+.venv/
+__pycache__/
+*.pyc
+dist/
 .env*.local
 .DS_Store
 .vercel

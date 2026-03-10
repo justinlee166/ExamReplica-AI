@@ -4,7 +4,7 @@
 
 ### T-001: Initialize monorepo structure
 - **Phase:** 0
-- **Status:** Not Started
+- **Status:** Complete
 - **Goal:** Create `/frontend` and `/backend` directories with proper `.gitignore` entries
 - **Acceptance Criteria:**
   - Repo has `frontend/` and `backend/` directories
@@ -13,10 +13,10 @@
 
 ### T-002: Scaffold React frontend
 - **Phase:** 0
-- **Status:** Not Started
-- **Goal:** Initialize React + TypeScript + Vite project with Tailwind CSS and Shadcn/ui
+- **Status:** Complete
+- **Goal:** Initialize React + TypeScript frontend with Tailwind CSS and Shadcn/ui
 - **Acceptance Criteria:**
-  - `frontend/` contains a working Vite + React + TypeScript project
+  - `frontend/` contains a working Next.js + React + TypeScript project (App Router)
   - Tailwind CSS is configured and working
   - Shadcn/ui is installed and a test component renders
   - `npm run dev` starts the dev server
@@ -25,7 +25,7 @@
 
 ### T-003: Scaffold FastAPI backend
 - **Phase:** 0
-- **Status:** Not Started
+- **Status:** Complete
 - **Goal:** Initialize FastAPI project with proper structure, dependencies, and virtual environment
 - **Acceptance Criteria:**
   - `backend/` contains a FastAPI project with `main.py`
@@ -36,7 +36,7 @@
 
 ### T-004: Health check endpoint
 - **Phase:** 0
-- **Status:** Not Started
+- **Status:** Complete
 - **Goal:** Backend serves a health check endpoint; frontend can call it
 - **Acceptance Criteria:**
   - `GET /api/health` returns `{ "status": "ok" }`
@@ -45,7 +45,7 @@
 
 ### T-005: Environment and Supabase setup
 - **Phase:** 0
-- **Status:** Not Started
+- **Status:** Complete
 - **Goal:** Set up environment variable management and Supabase project
 - **Acceptance Criteria:**
   - `.env.example` files exist for both frontend and backend
@@ -59,7 +59,7 @@
 
 ### T-101: User authentication
 - **Phase:** 1
-- **Status:** Not Started
+- **Status:** Complete
 - **Goal:** Implement user auth via Supabase Auth
 - **Acceptance Criteria:**
   - Users can sign up and log in with email/password
@@ -69,7 +69,7 @@
 
 ### T-102: Workspace CRUD API
 - **Phase:** 1
-- **Status:** Not Started
+- **Status:** Complete
 - **Goal:** Full workspace CRUD endpoints
 - **Acceptance Criteria:**
   - `POST /api/workspaces` creates a workspace
@@ -82,7 +82,7 @@
 
 ### T-103: Workspace UI
 - **Phase:** 1
-- **Status:** Not Started
+- **Status:** Complete
 - **Goal:** Frontend workspace list and detail views
 - **Acceptance Criteria:**
   - Workspace list page shows all workspaces
@@ -92,7 +92,7 @@
 
 ### T-104: Document upload API
 - **Phase:** 1
-- **Status:** Not Started
+- **Status:** Complete
 - **Goal:** Upload documents to a workspace with labeling
 - **Acceptance Criteria:**
   - `POST /api/workspaces/{id}/documents` accepts file upload
@@ -103,7 +103,7 @@
 
 ### T-105: Document upload UI
 - **Phase:** 1
-- **Status:** Not Started
+- **Status:** Complete
 - **Goal:** Frontend upload interface with status indicators
 - **Acceptance Criteria:**
   - Drag-and-drop or file picker upload

@@ -129,10 +129,10 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-3">
             <Button variant="ghost" asChild>
-              <Link href="/auth/signin">Sign In</Link>
+              <Link href="/login">Sign In</Link>
             </Button>
             <Button asChild>
-              <Link href="/auth/signup">Get Started</Link>
+              <Link href="/signup">Get Started</Link>
             </Button>
           </div>
         </div>
@@ -165,7 +165,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Button size="lg" className="h-12 px-8 text-base" asChild>
-                <Link href="/auth/signup">
+                <Link href="/signup">
                   Start Building Your Exam Profile
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
@@ -375,7 +375,7 @@ export default function LandingPage() {
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Button size="lg" className="h-12 px-8 text-base" asChild>
-                  <Link href="/auth/signup">
+                  <Link href="/signup">
                     Get Started Free
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Link>
