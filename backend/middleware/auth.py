@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import time
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -11,6 +12,9 @@ from fastapi import Depends, Request
 
 from backend.config.settings import Settings, get_settings
 from backend.models.errors import UnauthorizedError
+
+_JWKS_CACHE_TTL_SECONDS = 3600.0
+_jwks_cache: dict[str, tuple[str, float]] = {}
 
 
 @dataclass(frozen=True)
@@ -47,18 +51,34 @@ async def _fetch_supabase_jwks(settings: Settings) -> dict[str, Any]:
         return resp.json()
 
 
+async def _get_cached_jwks_secret(settings: Settings) -> str:
+    if not settings.supabase_url:
+        raise UnauthorizedError("Unable to validate token (Supabase URL missing)")
+
+    cache_key = settings.supabase_url
+    cached = _jwks_cache.get(cache_key)
+    now = time.monotonic()
+    if cached and now - cached[1] < _JWKS_CACHE_TTL_SECONDS:
+        return cached[0]
+
+    jwks = await _fetch_supabase_jwks(settings)
+    secret = _decode_supabase_secret_from_jwks(jwks)
+    if not secret:
+        raise UnauthorizedError("Unable to validate token (no shared secret found)")
+
+    _jwks_cache[cache_key] = (secret, now)
+    return secret
+
+
 async def _get_jwt_secret(settings: Settings) -> str:
     if settings.supabase_jwt_secret:
         return settings.supabase_jwt_secret
     try:
-        jwks = await _fetch_supabase_jwks(settings)
+        return await _get_cached_jwks_secret(settings)
+    except UnauthorizedError:
+        raise
     except Exception as exc:
         raise UnauthorizedError("Unable to validate token (JWKS fetch failed)") from exc
-
-    secret = _decode_supabase_secret_from_jwks(jwks)
-    if not secret:
-        raise UnauthorizedError("Unable to validate token (no shared secret found)")
-    return secret
 
 
 async def get_current_user(
