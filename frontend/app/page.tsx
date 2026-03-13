@@ -4,7 +4,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   GraduationCap,
-  Upload,
   Brain,
   Target,
   FileText,
@@ -13,9 +12,7 @@ import {
   Sparkles,
   CheckCircle2,
   ArrowRight,
-  Zap,
   Shield,
-  Users,
 } from "lucide-react";
 
 const features = [
@@ -192,51 +189,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Dashboard Preview */}
-          <div className="relative mt-20">
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-background via-transparent to-transparent z-10" />
-            <div className="rounded-2xl border border-border bg-card p-2 shadow-2xl">
-              <div className="rounded-xl bg-background/50 p-6">
-                {/* Mock Dashboard Preview */}
-                <div className="grid grid-cols-4 gap-4">
-                  {/* Sidebar Mock */}
-                  <div className="col-span-1 space-y-2 rounded-lg bg-secondary/30 p-4">
-                    <div className="h-8 w-24 rounded bg-primary/20" />
-                    <div className="space-y-1 pt-4">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <div key={i} className="h-6 rounded bg-secondary" />
-                      ))}
-                    </div>
-                  </div>
-                  {/* Main Content Mock */}
-                  <div className="col-span-3 space-y-4">
-                    <div className="flex gap-4">
-                      {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="flex-1 rounded-lg bg-secondary/30 p-4">
-                          <div className="h-4 w-16 rounded bg-muted-foreground/20" />
-                          <div className="mt-2 h-8 w-12 rounded bg-primary/30" />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="col-span-2 rounded-lg bg-secondary/30 p-4 h-40">
-                        <div className="h-4 w-32 rounded bg-muted-foreground/20" />
-                        <div className="mt-4 h-24 rounded bg-primary/10" />
-                      </div>
-                      <div className="rounded-lg bg-secondary/30 p-4 h-40">
-                        <div className="h-4 w-24 rounded bg-muted-foreground/20" />
-                        <div className="mt-4 space-y-2">
-                          {[1, 2, 3].map((i) => (
-                            <div key={i} className="h-6 rounded bg-secondary" />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
