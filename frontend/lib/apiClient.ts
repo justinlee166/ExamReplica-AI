@@ -87,7 +87,10 @@ async function request<T>(
   const body = isJson ? await resp.json().catch(() => null) : await resp.text().catch(() => "");
 
   if (!resp.ok) {
-    const detail = typeof body === "object" && body ? (body as any).detail : body;
+    const detail =
+      typeof body === "object" && body !== null && "detail" in body
+        ? (body as { detail: unknown }).detail
+        : body;
     throw new ApiError(`Request failed: ${resp.status}`, resp.status, detail);
   }
 

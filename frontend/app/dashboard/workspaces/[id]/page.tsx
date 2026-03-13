@@ -19,6 +19,8 @@ export default function WorkspaceDetailPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function refresh() {
     setError(null);
@@ -33,6 +35,19 @@ export default function WorkspaceDetailPage() {
       setError(err instanceof Error ? err.message : "Failed to load workspace");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDeleteDocument(documentId: string) {
+    setDeletingId(documentId);
+    setDeleteError(null);
+    try {
+      await apiClient.deleteDocument(workspaceId, documentId);
+      await refresh();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Failed to delete document");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -74,6 +89,7 @@ export default function WorkspaceDetailPage() {
 
       <div className="space-y-3">
         <h2 className="text-lg font-semibold">Documents</h2>
+        {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
         {documents.length === 0 ? (
           <p className="text-sm text-muted-foreground">No documents uploaded yet.</p>
         ) : (
@@ -89,12 +105,10 @@ export default function WorkspaceDetailPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={async () => {
-                      await apiClient.deleteDocument(workspaceId, d.id);
-                      refresh();
-                    }}
+                    disabled={deletingId === d.id}
+                    onClick={() => void handleDeleteDocument(d.id)}
                   >
-                    Delete
+                    {deletingId === d.id ? "Deleting…" : "Delete"}
                   </Button>
                 </div>
               </Card>
@@ -105,4 +119,3 @@ export default function WorkspaceDetailPage() {
     </div>
   );
 }
-

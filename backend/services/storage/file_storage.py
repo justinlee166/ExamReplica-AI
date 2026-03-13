@@ -57,11 +57,16 @@ class LocalFileStorage:
         return str(rel)
 
     def delete(self, *, file_path: str) -> None:
+        import logging
+
         full = pathlib.Path(self.root) / file_path
         try:
             full.unlink(missing_ok=True)
-        except Exception:
-            return
+        except Exception as exc:
+            # Non-fatal: log and continue — a missing or locked file should not crash the app.
+            logging.getLogger(__name__).warning(
+                "LocalFileStorage.delete: failed to remove %s: %s", full, exc
+            )
 
 
 @dataclass(frozen=True)
