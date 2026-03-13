@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -52,6 +53,9 @@ export function CreateWorkspaceDialog({ onCreated }: { onCreated: () => void }) 
       <DialogContent>
         <DialogHeader>
           <DialogTitle>New workspace</DialogTitle>
+          <DialogDescription className="sr-only">
+            Create a new workspace for your course.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="space-y-4">
