@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import base64
+import asyncio
+import logging
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -8,13 +9,26 @@ from uuid import UUID
 
 import httpx
 import jwt
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request, status
 
 from backend.config.settings import Settings, get_settings
-from backend.models.errors import UnauthorizedError
+from backend.models.errors import ConfigError, UnauthorizedError
 
-_JWKS_CACHE_TTL_SECONDS = 3600.0
-_jwks_cache: dict[str, tuple[str, float]] = {}
+logger = logging.getLogger(__name__)
+
+_JWKS_CACHE_TTL_SECONDS = 600.0
+_UPSTREAM_AUTH_ERROR_DETAIL = "Authentication service unavailable"
+_VALID_JWT_ALGORITHMS = {"ES256", "RS256"}
+
+
+@dataclass(frozen=True)
+class _CachedJwks:
+    keys_by_kid: dict[str, dict[str, Any]]
+    expires_at: float
+
+
+_jwks_cache: dict[str, _CachedJwks] = {}
+_jwks_locks: dict[str, asyncio.Lock] = {}
 
 
 @dataclass(frozen=True)
@@ -23,7 +37,7 @@ class AuthenticatedUser:
     email: str | None
 
 
-def _get_bearer_token(request: Request) -> str:
+def get_bearer_token(request: Request) -> str:
     raw = request.headers.get("authorization")
     if not raw:
         raise UnauthorizedError("Missing Authorization header")
@@ -33,70 +47,178 @@ def _get_bearer_token(request: Request) -> str:
     return parts[1].strip()
 
 
-def _decode_supabase_secret_from_jwks(jwks: dict[str, Any]) -> str | None:
-    keys = jwks.get("keys")
-    if not isinstance(keys, list):
-        return None
-    for key in keys:
-        if isinstance(key, dict) and key.get("kty") == "oct" and isinstance(key.get("k"), str):
-            return base64.urlsafe_b64decode(key["k"] + "==").decode("utf-8")
-    return None
-
-
-async def _fetch_supabase_jwks(settings: Settings) -> dict[str, Any]:
-    url = f"{settings.supabase_url.rstrip('/')}/auth/v1/certs"
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        resp = await client.get(url)
-        resp.raise_for_status()
-        return resp.json()
-
-
-async def _get_cached_jwks_secret(settings: Settings) -> str:
+def _auth_issuer(settings: Settings) -> str:
     if not settings.supabase_url:
-        raise UnauthorizedError("Unable to validate token (Supabase URL missing)")
-
-    cache_key = settings.supabase_url
-    cached = _jwks_cache.get(cache_key)
-    now = time.monotonic()
-    if cached and now - cached[1] < _JWKS_CACHE_TTL_SECONDS:
-        return cached[0]
-
-    jwks = await _fetch_supabase_jwks(settings)
-    secret = _decode_supabase_secret_from_jwks(jwks)
-    if not secret:
-        raise UnauthorizedError("Unable to validate token (no shared secret found)")
-
-    _jwks_cache[cache_key] = (secret, now)
-    return secret
+        raise ConfigError("SUPABASE_URL is required")
+    return f"{settings.supabase_url.rstrip('/')}/auth/v1"
 
 
-async def _get_jwt_secret(settings: Settings) -> str:
-    if settings.supabase_jwt_secret:
-        return settings.supabase_jwt_secret
+def _jwks_url(settings: Settings) -> str:
+    return f"{_auth_issuer(settings)}/certs"
+
+
+def _get_jwks_lock(jwks_url: str) -> asyncio.Lock:
+    lock = _jwks_locks.get(jwks_url)
+    if lock is None:
+        lock = asyncio.Lock()
+        _jwks_locks[jwks_url] = lock
+    return lock
+
+
+def _parse_cache_ttl(headers: httpx.Headers) -> float:
+    cache_control = headers.get("cache-control", "")
+    for directive in cache_control.split(","):
+        directive = directive.strip()
+        if directive.startswith("max-age="):
+            try:
+                return max(float(directive.split("=", 1)[1]), 0.0)
+            except ValueError:
+                break
+    return _JWKS_CACHE_TTL_SECONDS
+
+
+def _normalize_jwks(payload: Any) -> dict[str, dict[str, Any]]:
+    if not isinstance(payload, dict):
+        raise ValueError("JWKS payload is not an object")
+
+    keys = payload.get("keys")
+    if not isinstance(keys, list):
+        raise ValueError("JWKS payload is missing keys")
+
+    normalized: dict[str, dict[str, Any]] = {}
+    for key in keys:
+        if not isinstance(key, dict):
+            continue
+        kid = key.get("kid")
+        if isinstance(kid, str) and kid:
+            normalized[kid] = key
+
+    if not normalized:
+        raise ValueError("JWKS payload does not contain any signing keys")
+
+    return normalized
+
+
+async def _fetch_jwks(settings: Settings) -> _CachedJwks:
+    jwks_url = _jwks_url(settings)
     try:
-        return await _get_cached_jwks_secret(settings)
-    except UnauthorizedError:
-        raise
-    except Exception as exc:
-        raise UnauthorizedError("Unable to validate token (JWKS fetch failed)") from exc
+        async with httpx.AsyncClient(timeout=httpx.Timeout(5.0, connect=2.0)) as client:
+            response = await client.get(
+                jwks_url,
+                headers={"Accept": "application/json"},
+            )
+        response.raise_for_status()
+        keys_by_kid = _normalize_jwks(response.json())
+    except httpx.TimeoutException as exc:
+        logger.warning("Timed out fetching Supabase JWKS from %s", jwks_url, exc_info=exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=_UPSTREAM_AUTH_ERROR_DETAIL,
+        ) from exc
+    except httpx.RequestError as exc:
+        logger.warning("Failed to fetch Supabase JWKS from %s", jwks_url, exc_info=exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=_UPSTREAM_AUTH_ERROR_DETAIL,
+        ) from exc
+    except httpx.HTTPStatusError as exc:
+        logger.warning(
+            "Supabase JWKS endpoint returned %s for %s",
+            exc.response.status_code,
+            jwks_url,
+            exc_info=exc,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=_UPSTREAM_AUTH_ERROR_DETAIL,
+        ) from exc
+    except ValueError as exc:
+        logger.error("Supabase JWKS payload was invalid for %s", jwks_url, exc_info=exc)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=_UPSTREAM_AUTH_ERROR_DETAIL,
+        ) from exc
+
+    ttl_seconds = _parse_cache_ttl(response.headers)
+    return _CachedJwks(
+        keys_by_kid=keys_by_kid,
+        expires_at=time.monotonic() + ttl_seconds,
+    )
+
+
+async def _get_signing_jwk(settings: Settings, kid: str) -> dict[str, Any]:
+    jwks_url = _jwks_url(settings)
+    cached = _jwks_cache.get(jwks_url)
+    now = time.monotonic()
+    if cached and cached.expires_at > now and kid in cached.keys_by_kid:
+        return cached.keys_by_kid[kid]
+
+    async with _get_jwks_lock(jwks_url):
+        cached = _jwks_cache.get(jwks_url)
+        now = time.monotonic()
+        if cached and cached.expires_at > now and kid in cached.keys_by_kid:
+            return cached.keys_by_kid[kid]
+
+        stale_jwk = cached.keys_by_kid.get(kid) if cached else None
+        try:
+            refreshed = await _fetch_jwks(settings)
+        except HTTPException:
+            if stale_jwk is not None:
+                logger.warning("Using stale JWKS for kid=%s after refresh failure", kid)
+                return stale_jwk
+            raise
+
+        _jwks_cache[jwks_url] = refreshed
+        jwk = refreshed.keys_by_kid.get(kid)
+        if jwk is None:
+            raise UnauthorizedError("Invalid or expired token")
+        return jwk
 
 
 async def get_current_user(
-    request: Request, settings: Settings = Depends(get_settings)
+    token: str = Depends(get_bearer_token),
+    settings: Settings = Depends(get_settings),
 ) -> AuthenticatedUser:
-    token = _get_bearer_token(request)
-    secret = await _get_jwt_secret(settings)
-
     try:
-        payload = jwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False})
+        header = jwt.get_unverified_header(token)
     except jwt.PyJWTError as exc:
+        logger.info("JWT header parsing failed: %s", exc.__class__.__name__)
         raise UnauthorizedError("Invalid or expired token") from exc
 
-    sub = payload.get("sub")
-    if not isinstance(sub, str):
-        raise UnauthorizedError("Invalid token subject")
+    alg = header.get("alg")
+    kid = header.get("kid")
+    if not isinstance(alg, str) or alg not in _VALID_JWT_ALGORITHMS:
+        raise UnauthorizedError("Invalid or expired token")
+    if not isinstance(kid, str) or not kid:
+        raise UnauthorizedError("Invalid or expired token")
+
+    jwk = await _get_signing_jwk(settings, kid)
+
     try:
-        user_id = UUID(sub)
+        signing_key = jwt.PyJWK.from_dict(jwk, algorithm=alg).key
+        payload = jwt.decode(
+            token,
+            key=signing_key,
+            algorithms=[alg],
+            issuer=_auth_issuer(settings),
+            audience=settings.supabase_jwt_audience,
+            options={
+                "require": ["exp", "sub", "iss"],
+                "verify_aud": bool(settings.supabase_jwt_audience),
+            },
+        )
+    except HTTPException:
+        raise
+    except jwt.PyJWTError as exc:
+        logger.info("JWT verification failed: %s", exc.__class__.__name__)
+        raise UnauthorizedError("Invalid or expired token") from exc
+
+    subject = payload.get("sub")
+    if not isinstance(subject, str):
+        raise UnauthorizedError("Invalid token subject")
+
+    try:
+        user_id = UUID(subject)
     except ValueError as exc:
         raise UnauthorizedError("Invalid token subject") from exc
 

@@ -26,7 +26,41 @@ examprofile-ai/
 
 ## Getting Started
 
-> Setup instructions will be added during Phase 0 scaffolding.
+### Prerequisites
+
+- Node.js (v18+)
+- Python 3.10+
+- Supabase project (for authentication and database)
+
+### Frontend Development Server
+
+To run the Next.js React frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend will be accessible at `http://localhost:3000`.
+
+### Backend Development Server
+
+To run the FastAPI backend, it is best to run it from the **project root** to ensure imports work correctly:
+
+```bash
+# From the project root (ExamReplica)
+source backend/.venv/bin/activate
+
+# Install dependencies
+pip install -r backend/requirements.txt
+
+# Start the server (using backend.main to ensure the package is found)
+export PYTHONPATH=$PYTHONPATH:.
+uvicorn backend.main:app --reload
+```
+
+The backend server will run at `http://localhost:8000`. API docs can be viewed at `http://localhost:8000/docs`.
 
 ## Documentation
 

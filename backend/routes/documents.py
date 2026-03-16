@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from supabase import Client
 
 from backend.config.settings import Settings, get_settings
-from backend.config.supabase_client import get_supabase_client
+from backend.config.supabase_client import get_user_client
 from backend.middleware.auth import AuthenticatedUser, get_current_user
 from backend.models.document import DocumentResponse, SourceType
 from backend.services.documents.document_service import DocumentService
@@ -36,7 +36,7 @@ async def upload_document(
     upload_label: str | None = Form(default=None),
     user: AuthenticatedUser = Depends(get_current_user),
     settings: Settings = Depends(get_settings),
-    supabase: Client = Depends(get_supabase_client),
+    supabase: Client = Depends(get_user_client),
 ) -> DocumentResponse:
     storage = _storage(settings, supabase)
     return await _service(supabase).create(
@@ -53,7 +53,7 @@ async def upload_document(
 async def list_documents(
     workspace_id: UUID,
     user: AuthenticatedUser = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    supabase: Client = Depends(get_user_client),
 ) -> list[DocumentResponse]:
     return _service(supabase).list(user_id=user.id, workspace_id=workspace_id)
 
@@ -63,7 +63,7 @@ async def get_document(
     workspace_id: UUID,
     document_id: UUID,
     user: AuthenticatedUser = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    supabase: Client = Depends(get_user_client),
 ) -> DocumentResponse:
     return _service(supabase).get(
         user_id=user.id, workspace_id=workspace_id, document_id=document_id
@@ -76,7 +76,7 @@ async def delete_document(
     document_id: UUID,
     user: AuthenticatedUser = Depends(get_current_user),
     settings: Settings = Depends(get_settings),
-    supabase: Client = Depends(get_supabase_client),
+    supabase: Client = Depends(get_user_client),
 ) -> None:
     storage = _storage(settings, supabase)
     _service(supabase).delete(

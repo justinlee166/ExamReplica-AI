@@ -5,28 +5,14 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
-  BookOpen,
-  Upload,
-  UserCircle,
-  FileText,
-  ClipboardList,
-  Send,
-  BarChart3,
+  FolderOpen,
   Settings,
   GraduationCap,
   ChevronRight,
 } from "lucide-react";
-
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Courses", href: "/dashboard/courses", icon: BookOpen },
-  { name: "Uploads", href: "/dashboard/uploads", icon: Upload },
-  { name: "Professor Profile", href: "/dashboard/professor-profile", icon: UserCircle },
-  { name: "Practice Sets", href: "/dashboard/practice", icon: FileText },
-  { name: "Simulated Exams", href: "/dashboard/exams", icon: ClipboardList },
-  { name: "Submissions", href: "/dashboard/submissions", icon: Send },
-  { name: "Weakness Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-];
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuthUser } from "@/lib/use-auth-user";
 
 const bottomNavigation = [
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
@@ -34,18 +20,29 @@ const bottomNavigation = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { loading, displayName, email, initials, avatarUrl } = useAuthUser();
+  const activeWorkspaceMatch = pathname.match(/^\/dashboard\/workspaces\/([^/]+)/);
+  const activeWorkspaceId = activeWorkspaceMatch?.[1] ?? null;
+  const workspaceHref = activeWorkspaceId ? `/dashboard/workspaces/${activeWorkspaceId}` : null;
+
+  const navigation = [
+    { name: "All Workspaces", href: "/dashboard", icon: LayoutDashboard },
+    ...(workspaceHref
+      ? [{ name: "Workspace Materials", href: workspaceHref, icon: FolderOpen }]
+      : []),
+  ];
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-sidebar">
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <div className="flex h-16 items-center gap-2 border-b border-border px-6">
+        <Link href="/dashboard" className="flex h-16 items-center gap-2 border-b border-border px-6">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <GraduationCap className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="text-lg font-semibold text-foreground">ExamProfile</span>
           <span className="text-xs font-medium text-muted-foreground">AI</span>
-        </div>
+        </Link>
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-3 py-4">
@@ -73,6 +70,15 @@ export function AppSidebar() {
               </Link>
             );
           })}
+
+          {!activeWorkspaceId && (
+            <div className="mx-2 mt-4 rounded-lg border border-dashed border-border bg-background/40 p-3">
+              <p className="text-xs font-medium text-foreground">Workspace context</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Select a workspace to upload materials and review its documents.
+              </p>
+            </div>
+          )}
         </nav>
 
         {/* Bottom Navigation */}
@@ -99,15 +105,32 @@ export function AppSidebar() {
 
         {/* User Section */}
         <div className="border-t border-border p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-              <span className="text-sm font-medium text-primary">JD</span>
+          {loading ? (
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-9 w-9 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-32" />
+              </div>
             </div>
-            <div className="flex-1 truncate">
-              <p className="text-sm font-medium text-foreground">John Doe</p>
-              <p className="text-xs text-muted-foreground">john@university.edu</p>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={avatarUrl ?? undefined} alt={displayName ?? email ?? "User"} />
+                <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1 truncate">
+                <p className="truncate text-sm font-medium text-foreground">
+                  {displayName ?? email ?? "Account"}
+                </p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {email ?? "No email available"}
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </aside>

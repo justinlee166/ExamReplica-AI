@@ -3,15 +3,21 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
+import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"),
+        extra="ignore",
+    )
 
     supabase_url: str | None = None
+    supabase_anon_key: str | None = None
     supabase_service_key: str | None = None
     supabase_jwt_secret: str | None = None
+    supabase_jwt_audience: str | None = "authenticated"
 
     cors_allow_origins: list[str] = ["http://localhost:3000"]
 

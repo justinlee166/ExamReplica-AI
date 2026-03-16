@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 from supabase import Client
 
-from backend.config.supabase_client import get_supabase_client
+from backend.config.supabase_client import get_user_client
 from backend.middleware.auth import AuthenticatedUser, get_current_user
 from backend.models.workspace import (
     WorkspaceCreateRequest,
@@ -26,7 +26,7 @@ def _service(supabase: Client) -> WorkspaceService:
 async def create_workspace(
     req: WorkspaceCreateRequest,
     user: AuthenticatedUser = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    supabase: Client = Depends(get_user_client),
 ) -> WorkspaceResponse:
     return _service(supabase).create(user_id=user.id, req=req)
 
@@ -34,7 +34,7 @@ async def create_workspace(
 @router.get("", response_model=list[WorkspaceResponse])
 async def list_workspaces(
     user: AuthenticatedUser = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    supabase: Client = Depends(get_user_client),
 ) -> list[WorkspaceResponse]:
     return _service(supabase).list(user_id=user.id)
 
@@ -43,7 +43,7 @@ async def list_workspaces(
 async def get_workspace(
     workspace_id: UUID,
     user: AuthenticatedUser = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    supabase: Client = Depends(get_user_client),
 ) -> WorkspaceDetailResponse:
     return _service(supabase).get_detail(user_id=user.id, workspace_id=workspace_id)
 
@@ -53,7 +53,7 @@ async def update_workspace(
     workspace_id: UUID,
     req: WorkspaceUpdateRequest,
     user: AuthenticatedUser = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    supabase: Client = Depends(get_user_client),
 ) -> WorkspaceResponse:
     return _service(supabase).update(user_id=user.id, workspace_id=workspace_id, req=req)
 
@@ -62,6 +62,6 @@ async def update_workspace(
 async def delete_workspace(
     workspace_id: UUID,
     user: AuthenticatedUser = Depends(get_current_user),
-    supabase: Client = Depends(get_supabase_client),
+    supabase: Client = Depends(get_user_client),
 ) -> None:
     _service(supabase).delete(user_id=user.id, workspace_id=workspace_id)
