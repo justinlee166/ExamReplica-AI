@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     supabase_anon_key: str | None = None
     supabase_service_key: str | None = None
     supabase_jwt_secret: str | None = None
-    supabase_jwt_audience: str | None = "authenticated"
+    supabase_jwt_audience: str | None = None
 
     cors_allow_origins: list[str] = ["http://localhost:3000"]
 
