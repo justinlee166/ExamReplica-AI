@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import { apiClient, type Document, type Workspace } from "@/lib/apiClient";
@@ -13,7 +13,7 @@ import { Card } from "@/components/ui/card";
 export default function WorkspaceDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const workspaceId = useMemo(() => params.id, [params.id]);
+  const workspaceId = params.id;
 
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -51,6 +51,10 @@ export default function WorkspaceDetailPage() {
     }
   }
 
+  const hasActiveProcessing = documents.some((document) =>
+    ["uploaded", "parsing", "parsed"].includes(document.processing_status),
+  );
+
   useEffect(() => {
     const supabase = getSupabaseClient();
     supabase.auth.getSession().then(({ data }) => {
@@ -61,11 +65,15 @@ export default function WorkspaceDetailPage() {
   }, [workspaceId]);
 
   useEffect(() => {
+    if (!hasActiveProcessing) {
+      return undefined;
+    }
+
     const id = window.setInterval(() => {
       apiClient.listDocuments(workspaceId).then(setDocuments).catch(() => {});
-    }, 5000);
+    }, 2000);
     return () => window.clearInterval(id);
-  }, [workspaceId]);
+  }, [hasActiveProcessing, workspaceId]);
 
   if (loading) return <div className="p-6">Loading...</div>;
   if (error) return <div className="p-6 text-sm text-destructive">{error}</div>;

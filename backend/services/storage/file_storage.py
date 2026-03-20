@@ -35,6 +35,8 @@ class FileStorage(Protocol):
 
     def delete(self, *, file_path: str) -> None: ...
 
+    def read_bytes(self, *, file_path: str) -> bytes: ...
+
 
 @dataclass(frozen=True)
 class LocalFileStorage:
@@ -68,6 +70,10 @@ class LocalFileStorage:
                 "LocalFileStorage.delete: failed to remove %s: %s", full, exc
             )
 
+    def read_bytes(self, *, file_path: str) -> bytes:
+        full = pathlib.Path(self.root) / file_path
+        return full.read_bytes()
+
 
 @dataclass(frozen=True)
 class SupabaseStorage:
@@ -92,8 +98,13 @@ class SupabaseStorage:
     def delete(self, *, file_path: str) -> None:
         self.client.storage.from_(self.bucket).remove([file_path])
 
+    def read_bytes(self, *, file_path: str) -> bytes:
+        return self.client.storage.from_(self.bucket).download(file_path)
 
-def build_file_storage(*, backend: str, local_root: str, bucket: str, supabase: Client) -> FileStorage:
+
+def build_file_storage(
+    *, backend: str, local_root: str, bucket: str, supabase: Client
+) -> FileStorage:
     if backend == "local":
         os.makedirs(local_root, exist_ok=True)
         return LocalFileStorage(root=local_root)

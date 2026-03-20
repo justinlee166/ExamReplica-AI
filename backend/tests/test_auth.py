@@ -5,14 +5,13 @@ from uuid import uuid4
 
 import httpx
 import jwt
-from cryptography.hazmat.primitives.asymmetric import ec
-from fastapi import Depends
-from fastapi.testclient import TestClient
-
 from backend.config.settings import Settings, get_settings
 from backend.main import create_app
 from backend.middleware import auth
 from backend.middleware.auth import AuthenticatedUser, get_current_user
+from cryptography.hazmat.primitives.asymmetric import ec
+from fastapi import Depends
+from fastapi.testclient import TestClient
 
 
 def _build_app() -> TestClient:

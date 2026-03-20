@@ -60,6 +60,10 @@ ExamProfile AI is a **modular monolith** — all backend services run within a s
 
 Each service is a Python module under `backend/services/`. Services communicate through direct function/class calls (not HTTP) within the monolith.
 
+Current implementation note:
+- Document parsing jobs are dispatched inside the monolith with FastAPI `BackgroundTasks`, tracked in PostgreSQL via `document_processing_jobs`, and currently execute parse persistence followed immediately by semantic Markdown chunking.
+- The same background job now continues into embedding generation and local ChromaDB indexing before the document is marked `indexed`.
+
 ## Storage Layer
 
 | Store | Technology | Contents |

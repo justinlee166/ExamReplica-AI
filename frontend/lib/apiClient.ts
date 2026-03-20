@@ -19,6 +19,7 @@ export type Workspace = {
 export type DocumentProcessingStatus =
   | "uploaded"
   | "parsing"
+  | "parsed"
   | "indexed"
   | "ready"
   | "failed";

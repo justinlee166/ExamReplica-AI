@@ -1,0 +1,3 @@
+## Example: Derivatives
+
+The derivative of x^2 is 2x.

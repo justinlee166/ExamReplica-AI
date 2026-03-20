@@ -113,6 +113,43 @@
 
 ---
 
+## Phase 2: Document Ingestion and Parsing Pipeline
+
+### T-201: Document parsing service and background jobs
+- **Phase:** 2
+- **Status:** Complete
+- **Goal:** Parse uploaded documents asynchronously into Markdown and persist the result
+- **Acceptance Criteria:**
+  - `document_processing_jobs` and `parsed_documents` tables exist with migrations
+  - `POST /api/workspaces/{id}/documents` queues parsing immediately after upload
+  - Document status transitions through `uploaded` → `parsing` → `parsed` / `failed`
+  - Parsed Markdown is stored in `parsed_documents.normalized_content`
+  - Backend logs job progress with Python `logging`
+  - A backend test or script exists to exercise the parsing flow on a local document
+
+### T-202: Semantic Markdown chunking
+- **Phase:** 2
+- **Status:** Complete
+- **Goal:** Split parsed Markdown into semantic instructional units and persist them for later retrieval
+- **Acceptance Criteria:**
+  - `chunks` table exists with `chunk_id`, `document_id`, `content`, `position`, `chunk_type_label`, and `topic_label`
+  - The background document processing job calls chunking immediately after parsed Markdown is saved
+  - Chunk boundaries prefer Markdown headers and semantic instructional markers over naive fixed-size splitting
+  - A pytest file verifies chunk splitting behavior on mock Markdown content
+
+### T-203: Embedding generation and ChromaDB indexing
+- **Phase:** 2
+- **Status:** Complete
+- **Goal:** Generate embeddings for persisted chunks, index them in local ChromaDB, and expose final `indexed` status in the document workflow
+- **Acceptance Criteria:**
+  - `chunk_embeddings` table exists with vector-store tracking metadata
+  - The background document processing job runs parse → chunk → embed → index without blocking the request lifecycle
+  - Chunk vectors are stored in a persistent local ChromaDB collection with document and position metadata
+  - Document status transitions through `uploaded` → `parsing` → `indexed` on success
+  - A backend script can query ChromaDB and return the matching chunk for a test keyword
+
+---
+
 ## Future Phases
 
-Tasks for Phases 2–7 will be added as earlier phases are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
+Tasks for Phases 3–7 will be added as earlier phases are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.

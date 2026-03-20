@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from typing import Literal
 
-import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     storage_backend: Literal["local", "supabase"] = "local"
     local_storage_root: str = "./storage"
     supabase_storage_bucket: str = "documents"
+
+    embedding_provider: Literal["local_hash", "openai"] = "local_hash"
+    local_embedding_dimensions: int = 256
+    openai_api_key: str | None = None
+    openai_embedding_model: str = "text-embedding-3-small"
+
+    chroma_persist_directory: str = "./storage/chromadb"
+    chroma_collection_name: str = "document_chunks"
 
 
 @lru_cache

@@ -54,7 +54,7 @@ Uploaded source materials.
 | `file_name` | VARCHAR | Original filename |
 | `upload_label` | VARCHAR | User-provided label (e.g., "Midterm 1") |
 | `file_path` | VARCHAR | Object storage reference |
-| `processing_status` | VARCHAR | uploaded, parsing, indexed, ready, failed |
+| `processing_status` | VARCHAR | uploaded, parsing, parsed, indexed, ready, failed |
 | `created_at` | TIMESTAMP | |
 | `updated_at` | TIMESTAMP | |
 
@@ -66,7 +66,7 @@ Tracks parser invocation and status.
 |---|---|---|
 | `id` | UUID (PK) | |
 | `document_id` | UUID (FK → documents) | |
-| `parser_used` | VARCHAR | docling, marker |
+| `parser_used` | VARCHAR | Nullable until claimed by a worker; e.g. docling, marker, native_markdown, plain_text |
 | `status` | VARCHAR | queued, running, completed, failed |
 | `confidence_score` | FLOAT | Optional parsing confidence |
 | `error_message` | TEXT | Nullable |
@@ -80,9 +80,9 @@ Normalized structured representations.
 | Field | Type | Notes |
 |---|---|---|
 | `id` | UUID (PK) | |
-| `document_id` | UUID (FK → documents) | |
+| `document_id` | UUID (FK → documents) | Unique: one current parsed representation per document |
 | `normalized_content` | TEXT | Structured Markdown |
-| `structural_metadata` | JSONB | Section and layout metadata |
+| `structural_metadata` | JSONB | Parser metadata, section/layout metadata, job linkage |
 | `created_at` | TIMESTAMP | |
 
 ---
@@ -95,13 +95,12 @@ Semantic instructional units extracted from parsed documents.
 
 | Field | Type | Notes |
 |---|---|---|
-| `id` | UUID (PK) | |
-| `parsed_document_id` | UUID (FK → parsed_documents) | |
-| `chunk_text` | TEXT | |
-| `chunk_type` | VARCHAR | example, definition, problem, solution, theorem |
+| `chunk_id` | UUID (PK) | |
+| `document_id` | UUID (FK → documents) | Links chunk rows back to the uploaded source document |
+| `content` | TEXT | Chunked Markdown content |
+| `position` | INTEGER | Position within document |
+| `chunk_type_label` | VARCHAR | example, definition, problem, solution, theorem, section |
 | `topic_label` | VARCHAR | Optional inferred topic |
-| `position_index` | INTEGER | Position within document |
-| `metadata` | JSONB | Serialized retrieval metadata |
 | `created_at` | TIMESTAMP | |
 
 ### `chunk_embeddings`
@@ -111,12 +110,13 @@ References to vectorized representations.
 | Field | Type | Notes |
 |---|---|---|
 | `id` | UUID (PK) | |
-| `chunk_id` | UUID (FK → chunks) | |
+| `chunk_id` | UUID (FK → chunks.chunk_id) | |
 | `vector_store_id` | VARCHAR | External vector store reference |
+| `vector_store_collection` | VARCHAR | Chroma collection name used for the chunk |
 | `embedding_model` | VARCHAR | Model identifier |
 | `created_at` | TIMESTAMP | |
 
-> **Note:** The actual embedding vectors live in ChroamaDB / pgvector, not in rows here. This table provides the relational link.
+> **Note:** The actual embedding vectors live in ChromaDB / pgvector, not in rows here. This table provides the relational link.
 
 ---
 

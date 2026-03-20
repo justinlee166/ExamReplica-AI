@@ -13,10 +13,13 @@ Upload → Parse → Normalize → Chunk → Embed + Index → Retrieve → Prof
 **Input:** Uploaded files (PDF, PPTX, DOCX, TXT)
 **Output:** Normalized structured representation (Markdown-like with metadata)
 
+- Upload dispatch is asynchronous: `POST /documents` persists the upload, creates a `document_processing_jobs` row, and hands parsing off to a FastAPI background task.
+- Status flow for this slice is `uploaded` → `parsing` → `indexed` / `failed`.
 - Primary parser: **Docling** (layout-aware, handles equations and multi-column)
 - Fallback parser: **Marker** (strong math support — used when Docling confidence is low)
 - Preserves: section headers, problem boundaries, numbered examples, definition blocks
 - Each parsed document stores: source type, original filename, upload label, structural metadata
+- The same background job immediately hands normalized Markdown to the chunking stage after parse persistence succeeds
 - Documents that fail parsing are flagged for user review
 
 > ⚠️ **Implementation Note:** Do not raw-extract PDF text. Academic documents with equations, columns, and diagrams require layout-aware parsing. Naive extraction will corrupt instructional structure.
@@ -32,8 +35,9 @@ Upload → Parse → Normalize → Chunk → Embed + Index → Retrieve → Prof
   - Lecture subsections
   - Definition-theorem-example groups
   - Question stems with associated parts
+- The splitter should prefer Markdown headers first, then semantic line-level boundaries such as `Question 2:` or `Definition:`
 - Do not split mathematical reasoning or multi-part problems across chunks
-- Each chunk gets: `chunk_type`, `topic_label`, `position_index`, `metadata`
+- Each chunk row stores: `document_id`, `content`, `position`, `chunk_type_label`, `topic_label`
 
 ## Stage 3: Embedding and Metadata
 
@@ -41,6 +45,7 @@ Upload → Parse → Normalize → Chunk → Embed + Index → Retrieve → Prof
 **Output:** Vector embeddings stored in vector store; metadata stored in relational DB
 
 - Each chunk → embedding vector (stored in ChromaDB / pgvector)
+- In the current dev slice, embeddings default to a deterministic local hashing model and can be switched to `text-embedding-3-small` by setting `EMBEDDING_PROVIDER=openai`
 - Each chunk also carries structured metadata:
   - Source document ID
   - Source type (slides, homework, exam, etc.)
@@ -49,6 +54,7 @@ Upload → Parse → Normalize → Chunk → Embed + Index → Retrieve → Prof
   - Chunk type (problem, example, definition, etc.)
   - Position within source document
   - Parsing confidence indicator
+- Chroma records use the PostgreSQL `chunk_id` as the vector-store ID so relational rows and vector entries stay aligned
 
 > ⚠️ **Critical:** Metadata is not optional. Scope filtering (e.g., "Only Notes 3–8") must be enforceable through metadata, not just semantic similarity.
 

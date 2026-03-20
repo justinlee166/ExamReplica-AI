@@ -7,11 +7,11 @@ import type { DocumentProcessingStatus } from "@/lib/apiClient";
 
 export function DocumentStatusBadge({ status }: { status: DocumentProcessingStatus }) {
   const variant: React.ComponentProps<typeof Badge>["variant"] =
-    status === "ready"
+    status === "ready" || status === "indexed"
       ? "default"
       : status === "failed"
         ? "destructive"
-        : status === "indexed"
+        : status === "parsed"
           ? "secondary"
           : "outline";
 

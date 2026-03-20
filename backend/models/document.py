@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 SourceType = Literal["prior_exam", "homework", "lecture_slides", "practice_test", "notes"]
-ProcessingStatus = Literal["uploaded", "parsing", "indexed", "ready", "failed"]
+ProcessingStatus = Literal["uploaded", "parsing", "parsed", "indexed", "ready", "failed"]
 
 
 class DocumentResponse(BaseModel):

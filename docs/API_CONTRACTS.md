@@ -62,7 +62,7 @@ Base path: `/api`
 
 ### `POST /api/workspaces/{workspace_id}/documents`
 
-**Purpose:** Upload a document to a workspace
+**Purpose:** Upload a document to a workspace and immediately queue background parsing
 
 **Request:** Multipart form data
 ```
@@ -73,11 +73,19 @@ upload_label: "Midterm 1"  (optional)
 
 **Response:** `201` — document record with `processing_status: "uploaded"`
 
+**Notes:**
+- The upload response returns immediately; parsing is dispatched via FastAPI background work after the DB row is created.
+- Document status then transitions asynchronously: `uploaded` → `parsing` → `indexed` or `failed`.
+
 ### `GET /api/workspaces/{workspace_id}/documents`
 
 **Purpose:** List all documents in a workspace with processing status
 
-**Response:** `200` — array of document objects
+**Response:** `200` — array of document objects. `processing_status` may be `uploaded`, `parsing`, `parsed`, `indexed`, `ready`, or `failed`.
+
+**Notes:**
+- The current ingestion slice lands on `indexed` after parse, chunk, embedding, and ChromaDB persistence complete.
+- `ready` remains reserved for later pipeline stages that depend on indexed documents.
 
 ### `GET /api/workspaces/{workspace_id}/documents/{document_id}`
 

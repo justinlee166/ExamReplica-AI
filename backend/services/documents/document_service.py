@@ -8,6 +8,7 @@ from supabase import Client
 
 from backend.models.document import DocumentResponse, SourceType
 from backend.models.errors import AppError, BadRequestError, NotFoundError
+from backend.services.retrieval.vector_store import VectorStore
 from backend.services.storage.file_storage import FileStorage
 from backend.services.workspaces.workspace_service import WorkspaceService
 
@@ -27,9 +28,10 @@ def _require_single(data: Any, *, not_found_message: str) -> dict[str, Any]:
 
 
 class DocumentService:
-    def __init__(self, supabase: Client) -> None:
+    def __init__(self, supabase: Client, *, vector_store: VectorStore | None = None) -> None:
         self._supabase = supabase
         self._workspaces = WorkspaceService(supabase)
+        self._vector_store = vector_store
 
     def list(self, *, user_id: UUID, workspace_id: UUID) -> list[DocumentResponse]:
         self._workspaces.get(user_id=user_id, workspace_id=workspace_id)
@@ -98,7 +100,11 @@ class DocumentService:
             storage.delete(file_path=file_path)
             raise AppError("Unexpected error creating document record") from exc
 
-    def delete(self, *, user_id: UUID, workspace_id: UUID, document_id: UUID, storage: FileStorage) -> None:
+    def delete(
+        self, *, user_id: UUID, workspace_id: UUID, document_id: UUID, storage: FileStorage
+    ) -> None:
         doc = self.get(user_id=user_id, workspace_id=workspace_id, document_id=document_id)
+        if self._vector_store is not None:
+            self._vector_store.delete_document(document_id=document_id)
         self._supabase.table("documents").delete().eq("id", str(document_id)).execute()
         storage.delete(file_path=doc.file_path)

@@ -66,7 +66,9 @@ class WorkspaceService:
         )
         count = int(getattr(count_resp, "count", 0) or 0)
         # STUB: Phase 3 will derive a real Professor Profile status from profile tables.
-        return WorkspaceDetailResponse(**workspace.model_dump(), document_count=count, profile_status="not_built")
+        return WorkspaceDetailResponse(
+            **workspace.model_dump(), document_count=count, profile_status="not_built"
+        )
 
     def update(
         self, *, user_id: UUID, workspace_id: UUID, req: WorkspaceUpdateRequest
