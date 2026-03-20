@@ -9,6 +9,7 @@ import { DocumentStatusBadge } from "@/components/documents/DocumentStatusBadge"
 import { DocumentUploadForm } from "@/components/documents/DocumentUploadForm";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import Link from "next/link";
 
 export default function WorkspaceDetailPage() {
   const router = useRouter();
@@ -89,6 +90,11 @@ export default function WorkspaceDetailPage() {
             {workspace.description ? ` · ${workspace.description}` : ""}
           </p>
         </div>
+        <Button variant="outline" asChild>
+          <Link id="workspace-detail-insights-link" href={`/dashboard/workspaces/${workspaceId}/insights`}>
+            View Insights
+          </Link>
+        </Button>
       </div>
 
       <Card className="p-4">

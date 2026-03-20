@@ -130,7 +130,7 @@ export default function AnalyticsPage() {
             <SelectContent>
               <SelectItem value="all">All Courses</SelectItem>
               {courses.map(course => (
-                <SelectItem key={course.id} value={course.id}>{course.code}</SelectItem>
+                <SelectItem key={course.id} value={course.id}>{course.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

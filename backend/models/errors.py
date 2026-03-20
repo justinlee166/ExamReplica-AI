@@ -29,3 +29,13 @@ class NotFoundError(AppError):
 class ConfigError(AppError):
     status_code = 500
     detail = "Server configuration error"
+
+
+class UpstreamServiceError(AppError):
+    status_code = 502
+    detail = "Upstream service error"
+
+
+class ServiceUnavailableError(AppError):
+    status_code = 503
+    detail = "Service unavailable"

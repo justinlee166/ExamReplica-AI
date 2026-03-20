@@ -111,20 +111,66 @@ upload_label: "Midterm 1"  (optional)
   "id": "...",
   "workspace_id": "...",
   "version": 3,
-  "topic_distribution": { "hypothesis_testing": 0.3, "confidence_intervals": 0.25, ... },
-  "question_type_distribution": { "mcq": 0.4, "frq": 0.35, "calculation": 0.25 },
-  "difficulty_profile": { "estimated_level": "moderate-hard", ... },
-  "exam_structure_profile": { "typical_question_count": 8, ... },
-  "evidence_summary": { "total_documents": 12, "exams_used": 3, ... },
+  "topic_distribution": {
+    "summary": "...",
+    "topics": [
+      {
+        "topic_label": "hypothesis_testing",
+        "weight": 0.4,
+        "evidence_strength": "high",
+        "rationale": "..."
+      }
+    ]
+  },
+  "question_type_distribution": {
+    "summary": "...",
+    "question_types": [
+      {
+        "question_type": "mcq",
+        "weight": 0.35,
+        "evidence_strength": "medium",
+        "rationale": "..."
+      }
+    ]
+  },
+  "difficulty_profile": {
+    "estimated_level": "moderate-hard",
+    "confidence": "medium",
+    "calculation_intensity": { "level": "high", "rationale": "..." },
+    "conceptual_intensity": { "level": "moderate", "rationale": "..." },
+    "multi_step_reasoning": { "level": "high", "rationale": "..." },
+    "time_pressure": { "level": "moderate", "rationale": "..." },
+    "summary": "..."
+  },
+  "exam_structure_profile": {
+    "minimum_question_count": 6,
+    "typical_question_count": 8,
+    "maximum_question_count": 10,
+    "section_patterns": ["..."],
+    "tendency_notes": ["..."],
+    "answer_format_expectations": ["..."],
+    "summary": "..."
+  },
+  "evidence_summary": {
+    "total_documents": 12,
+    "total_chunks": 18,
+    "source_counts": [
+      { "source_type": "prior_exam", "document_count": 2, "chunk_count": 6 }
+    ],
+    "retrieved_document_ids": ["..."],
+    "retrieved_chunk_ids": ["..."],
+    "retrieval_query": "professor assessment style, exam structure, emphasized topics, representative course evidence",
+    "evidence_characterization": "..."
+  },
   "created_at": "..."
 }
 ```
 
-### `POST /api/workspaces/{workspace_id}/profile/rebuild`
+### `POST /api/workspaces/{workspace_id}/profile/generate`
 
-**Purpose:** Trigger a profile rebuild (e.g., after new materials are uploaded)
+**Purpose:** Generate or regenerate the latest Professor Profile for a workspace using retrieved evidence and Gemini 1.5 Flash
 
-**Response:** `202` — accepted, rebuild in progress
+**Response:** `200` — latest generated profile object
 
 ---
 

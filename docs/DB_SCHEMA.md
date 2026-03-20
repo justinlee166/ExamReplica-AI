@@ -124,24 +124,30 @@ References to vectorized representations.
 
 ### `professor_profiles`
 
-One active profile per workspace.
+One active profile per workspace. Stores the currently active Professor Profile JSON for fast reads.
 
 | Field | Type | Notes |
 |---|---|---|
 | `id` | UUID (PK) | |
-| `workspace_id` | UUID (FK → workspaces) | |
-| `active_version_id` | UUID (FK → professor_profile_versions) | |
+| `workspace_id` | UUID (FK → workspaces) | Unique: one active profile row per workspace |
+| `version` | INTEGER | Active version number |
+| `topic_distribution` | JSONB | Soft topic weighting |
+| `question_type_distribution` | JSONB | Question-type tendencies |
+| `difficulty_profile` | JSONB | Difficulty tendencies |
+| `exam_structure_profile` | JSONB | Inferred exam structure |
+| `evidence_summary` | JSONB | Summary of evidence sources |
 | `created_at` | TIMESTAMP | |
 | `updated_at` | TIMESTAMP | |
 
 ### `professor_profile_versions`
 
-Versioned snapshots of inferred tendencies. New version created when materials change.
+Versioned snapshots of inferred tendencies. New version created when materials change; each row is an immutable historical snapshot.
 
 | Field | Type | Notes |
 |---|---|---|
 | `id` | UUID (PK) | |
 | `professor_profile_id` | UUID (FK → professor_profiles) | |
+| `version` | INTEGER | Version number within a professor profile |
 | `topic_distribution` | JSONB | Soft topic weighting |
 | `question_type_distribution` | JSONB | Question-type tendencies |
 | `difficulty_profile` | JSONB | Difficulty tendencies |

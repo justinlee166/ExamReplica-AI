@@ -9,6 +9,7 @@ import {
   Settings,
   GraduationCap,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,11 +25,17 @@ export function AppSidebar() {
   const activeWorkspaceMatch = pathname.match(/^\/dashboard\/workspaces\/([^/]+)/);
   const activeWorkspaceId = activeWorkspaceMatch?.[1] ?? null;
   const workspaceHref = activeWorkspaceId ? `/dashboard/workspaces/${activeWorkspaceId}` : null;
+  const workspaceInsightsHref = activeWorkspaceId
+    ? `/dashboard/workspaces/${activeWorkspaceId}/insights`
+    : null;
 
   const navigation = [
     { name: "All Workspaces", href: "/dashboard", icon: LayoutDashboard },
     ...(workspaceHref
       ? [{ name: "Workspace Materials", href: workspaceHref, icon: FolderOpen }]
+      : []),
+    ...(workspaceInsightsHref
+      ? [{ name: "Workspace Insights", href: workspaceInsightsHref, icon: Sparkles }]
       : []),
   ];
 

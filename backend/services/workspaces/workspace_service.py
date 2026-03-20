@@ -65,9 +65,16 @@ class WorkspaceService:
             .execute()
         )
         count = int(getattr(count_resp, "count", 0) or 0)
-        # STUB: Phase 3 will derive a real Professor Profile status from profile tables.
+        profile_resp = (
+            self._supabase.table("professor_profiles")
+            .select("id")
+            .eq("workspace_id", str(workspace_id))
+            .limit(1)
+            .execute()
+        )
+        profile_status = "built" if _require_single_or_none(profile_resp.data) is not None else "not_built"
         return WorkspaceDetailResponse(
-            **workspace.model_dump(), document_count=count, profile_status="not_built"
+            **workspace.model_dump(), document_count=count, profile_status=profile_status
         )
 
     def update(
@@ -97,3 +104,14 @@ class WorkspaceService:
             .eq("user_id", str(user_id))
             .execute()
         )
+
+
+def _require_single_or_none(data: Any) -> dict[str, Any] | None:
+    if isinstance(data, list):
+        if not data:
+            return None
+        if len(data) == 1 and isinstance(data[0], dict):
+            return data[0]
+    if isinstance(data, dict):
+        return data
+    raise BadRequestError("Unexpected response from database")

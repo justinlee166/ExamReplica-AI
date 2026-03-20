@@ -1,1 +1,1 @@
-__all__ = ["vector_store"]
+__all__ = ["retrieval_service", "vector_store"]

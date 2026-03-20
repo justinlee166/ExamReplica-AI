@@ -43,6 +43,92 @@ export type Document = {
   updated_at: string;
 };
 
+export type EvidenceStrength = "low" | "medium" | "high";
+
+export type DifficultyLabel = "easy" | "moderate" | "moderate-hard" | "hard";
+
+export type DifficultyAxisLevel = "low" | "moderate" | "high";
+
+export type ProfileQuestionType = "mcq" | "frq" | "calculation" | "proof" | "mixed";
+
+export type TopicWeight = {
+  topic_label: string;
+  weight: number;
+  evidence_strength: EvidenceStrength;
+  rationale: string;
+};
+
+export type TopicDistribution = {
+  summary: string;
+  topics: TopicWeight[];
+};
+
+export type QuestionTypeWeight = {
+  question_type: ProfileQuestionType;
+  weight: number;
+  evidence_strength: EvidenceStrength;
+  rationale: string;
+};
+
+export type QuestionTypeDistribution = {
+  summary: string;
+  question_types: QuestionTypeWeight[];
+};
+
+export type DifficultyAxis = {
+  level: DifficultyAxisLevel;
+  rationale: string;
+};
+
+export type DifficultyProfile = {
+  estimated_level: DifficultyLabel;
+  confidence: EvidenceStrength;
+  calculation_intensity: DifficultyAxis;
+  conceptual_intensity: DifficultyAxis;
+  multi_step_reasoning: DifficultyAxis;
+  time_pressure: DifficultyAxis;
+  summary: string;
+};
+
+export type ExamStructureProfile = {
+  minimum_question_count: number;
+  typical_question_count: number;
+  maximum_question_count: number;
+  section_patterns: string[];
+  tendency_notes: string[];
+  answer_format_expectations: string[];
+  summary: string;
+};
+
+export type SourceEvidenceCount = {
+  source_type: DocumentSourceType;
+  document_count: number;
+  chunk_count: number;
+};
+
+export type EvidenceSummary = {
+  total_documents: number;
+  total_chunks: number;
+  source_counts: SourceEvidenceCount[];
+  retrieved_document_ids: string[];
+  retrieved_chunk_ids: string[];
+  retrieval_query: string;
+  evidence_characterization: string;
+};
+
+export type ProfessorProfile = {
+  id: string;
+  workspace_id: string;
+  version: number;
+  topic_distribution: TopicDistribution;
+  question_type_distribution: QuestionTypeDistribution;
+  difficulty_profile: DifficultyProfile;
+  exam_structure_profile: ExamStructureProfile;
+  evidence_summary: EvidenceSummary;
+  created_at: string;
+  updated_at: string;
+};
+
 export class ApiError extends Error {
   status: number;
   detail?: unknown;
@@ -171,6 +257,19 @@ export const apiClient = {
     return request<void>(
       `/api/workspaces/${encodeURIComponent(workspaceId)}/documents/${encodeURIComponent(documentId)}`,
       { method: "DELETE" },
+    );
+  },
+
+  getProfessorProfile(workspaceId: string): Promise<ProfessorProfile> {
+    return request<ProfessorProfile>(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/profile`,
+    );
+  },
+
+  generateProfessorProfile(workspaceId: string): Promise<ProfessorProfile> {
+    return request<ProfessorProfile>(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/profile/generate`,
+      { method: "POST" },
     );
   },
 };

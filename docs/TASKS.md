@@ -150,6 +150,46 @@
 
 ---
 
+## Phase 3: Retrieval and Professor Profile
+
+### T-301: Database Schema Updates for Professor Profiles
+- **Phase:** 3
+- **Status:** Complete
+- **Goal:** Create the database tables to store the structured JSON data about a professor.
+- **Acceptance Criteria:**
+  - `professor_profiles` and `professor_profile_versions` tables created via Supabase migration
+  - Tables store structured JSON data about a professor's tendencies, topic distribution, etc.
+  - Pydantic models correspond to the schema changes
+
+### T-302: Retrieval Service and LlamaIndex Integration
+- **Phase:** 3
+- **Status:** Complete
+- **Goal:** Build the backend RetrievalService using LlamaIndex to query ChromaDB for context-aware chunks.
+- **Acceptance Criteria:**
+  - Semantic search over chunks with metadata filtering
+  - LlamaIndex integrated to coordinate RAG operations
+  - Supports task-conditioned retrieval (e.g., grab syllabi and exams for profile generation)
+
+### T-303: Professor Profile Service (LLM Orchestrator)
+- **Phase:** 3
+- **Status:** Complete
+- **Goal:** Python service that takes retrieved chunks, feeds Gemini 1.5 Flash, and outputs a strict JSON profile.
+- **Acceptance Criteria:**
+  - Retrieves all relevant chunks for a specific workspace
+  - Instructs Gemini 1.5 Flash to act as an educational analyst
+  - Outputs a structured JSON object detailing trends and topic distribution
+
+### T-304: Frontend Profile Insights UI
+- **Phase:** 3
+- **Status:** Complete
+- **Goal:** Build a dashboard page in the React frontend that displays the JSON profile from the backend.
+- **Acceptance Criteria:**
+  - Fetches the professor profile from the backend API
+  - Displays tendencies, difficulty levels, and topic distributions visually
+  - Recharts or simple progress bars used for visual insights
+
+---
+
 ## Future Phases
 
-Tasks for Phases 3–7 will be added as earlier phases are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
+Tasks for Phases 4–7 will be added as earlier phases are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
