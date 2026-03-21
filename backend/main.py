@@ -13,6 +13,7 @@ from backend.routes.documents import router as documents_router
 from backend.routes.generation import router as generation_router
 from backend.routes.health import router as health_router
 from backend.routes.profiles import router as profiles_router
+from backend.routes.submissions import router as submissions_router
 from backend.routes.workspaces import router as workspaces_router
 
 
@@ -46,6 +47,7 @@ def create_app(settings: Settings) -> FastAPI:
     app.include_router(documents_router, prefix="/api")
     app.include_router(profiles_router, prefix="/api")
     app.include_router(generation_router, prefix="/api")
+    app.include_router(submissions_router, prefix="/api")
     return app
 
 

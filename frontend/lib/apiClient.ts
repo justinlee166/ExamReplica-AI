@@ -200,6 +200,62 @@ export type GeneratedExamDetail = {
   created_at: string;
 };
 
+// --- Submission & Grading types ---
+
+export type SubmissionStatus = "submitted" | "grading" | "graded" | "failed";
+
+export type ErrorSeverity = "minor" | "moderate" | "major";
+
+export type AnswerItem = {
+  generated_question_id: string;
+  student_answer: string;
+};
+
+export type SubmissionCreatePayload = {
+  answers: AnswerItem[];
+};
+
+export type SubmissionCreatedResponse = {
+  id: string;
+  status: SubmissionStatus;
+  created_at: string;
+};
+
+export type ErrorClassification = {
+  id: string;
+  error_type: string;
+  description: string | null;
+  severity: ErrorSeverity;
+};
+
+export type GradingResult = {
+  id: string;
+  generated_question_id: string;
+  score: number;
+  max_score: number;
+  is_correct: boolean;
+  feedback: string | null;
+  error_classifications: ErrorClassification[];
+};
+
+export type SubmissionAnswer = {
+  id: string;
+  generated_question_id: string;
+  student_answer: string;
+  grading_result: GradingResult | null;
+};
+
+export type SubmissionRead = {
+  id: string;
+  workspace_id: string;
+  generated_exam_id: string;
+  status: SubmissionStatus;
+  total_score: number | null;
+  max_score: number | null;
+  created_at: string;
+  answers: SubmissionAnswer[];
+};
+
 export class ApiError extends Error {
   status: number;
   detail?: unknown;
@@ -376,6 +432,30 @@ export const apiClient = {
   getExamDetail(workspaceId: string, examId: string): Promise<GeneratedExamDetail> {
     return request<GeneratedExamDetail>(
       `/api/workspaces/${encodeURIComponent(workspaceId)}/exams/${encodeURIComponent(examId)}`,
+    );
+  },
+
+  createSubmission(
+    workspaceId: string,
+    examId: string,
+    body: SubmissionCreatePayload,
+  ): Promise<SubmissionCreatedResponse> {
+    return request<SubmissionCreatedResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/exams/${encodeURIComponent(examId)}/submissions`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+  },
+
+  getSubmission(
+    workspaceId: string,
+    submissionId: string,
+  ): Promise<SubmissionRead> {
+    return request<SubmissionRead>(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/submissions/${encodeURIComponent(submissionId)}`,
     );
   },
 

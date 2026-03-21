@@ -1,17 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import { Download, Loader2 } from "lucide-react";
+import { useCallback, useState } from "react";
+import { Download, Loader2, Send } from "lucide-react";
 
-import { apiClient } from "@/lib/apiClient";
-import type { GeneratedExamDetail } from "@/lib/apiClient";
+import { apiClient, ApiError } from "@/lib/apiClient";
+import type {
+  GeneratedExamDetail,
+  AnswerItem,
+  SubmissionRead,
+} from "@/lib/apiClient";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExamQuestionCard } from "@/components/generation/ExamQuestionCard";
+import { GradingStatusPoller } from "@/components/submission/GradingStatusPoller";
+import { GradingResultsViewer } from "@/components/submission/GradingResultsViewer";
 
 type ExamViewerProps = {
   exam: GeneratedExamDetail;
   workspaceId: string;
+  /** When true, hides the submit button and answer inputs (read-only review). */
+  reviewOnly?: boolean;
 };
 
 function formatTimestamp(timestamp: string): string {
@@ -30,9 +38,29 @@ function toTitleCase(value: string): string {
     .replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
-export function ExamViewer({ exam, workspaceId }: ExamViewerProps) {
+type Phase = "taking" | "grading" | "results";
+
+export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  // Answer state: questionId -> student answer
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [phase, setPhase] = useState<Phase>("taking");
+  const [submitting, setSubmitting] = useState(false);
+  const [submissionId, setSubmissionId] = useState<string | null>(null);
+  const [submissionResult, setSubmissionResult] =
+    useState<SubmissionRead | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const answeredCount = Object.values(answers).filter((v) => v.trim()).length;
+
+  const handleAnswerChange = useCallback(
+    (questionId: string, value: string) => {
+      setAnswers((prev) => ({ ...prev, [questionId]: value }));
+    },
+    [],
+  );
 
   async function handleDownloadPdf() {
     setDownloading(true);
@@ -48,18 +76,88 @@ export function ExamViewer({ exam, workspaceId }: ExamViewerProps) {
       document.body.removeChild(anchor);
       URL.revokeObjectURL(url);
     } catch (err) {
-      setDownloadError(err instanceof Error ? err.message : "PDF download failed.");
+      setDownloadError(
+        err instanceof Error ? err.message : "PDF download failed.",
+      );
     } finally {
       setDownloading(false);
     }
   }
+
+  async function handleSubmit() {
+    setSubmitError(null);
+    setSubmitting(true);
+
+    const answerItems: AnswerItem[] = exam.questions
+      .filter((q) => answers[q.id]?.trim())
+      .map((q) => ({
+        generated_question_id: q.id,
+        student_answer: answers[q.id].trim(),
+      }));
+
+    if (answerItems.length === 0) {
+      setSubmitError("Please answer at least one question before submitting.");
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      const result = await apiClient.createSubmission(workspaceId, exam.id, {
+        answers: answerItems,
+      });
+      setSubmissionId(result.id);
+      setPhase("grading");
+    } catch (err) {
+      const msg =
+        err instanceof ApiError && typeof err.detail === "string"
+          ? err.detail
+          : err instanceof Error
+            ? err.message
+            : "Submission failed.";
+      setSubmitError(msg);
+      setSubmitting(false);
+    }
+  }
+
+  function handleGraded(submission: SubmissionRead) {
+    setSubmissionResult(submission);
+    setPhase("results");
+  }
+
+  // --- Grading in progress ---
+  if (phase === "grading" && submissionId) {
+    return (
+      <div className="space-y-6">
+        <GradingStatusPoller
+          workspaceId={workspaceId}
+          submissionId={submissionId}
+          onGraded={handleGraded}
+        />
+      </div>
+    );
+  }
+
+  // --- Results view ---
+  if (phase === "results" && submissionResult) {
+    return (
+      <GradingResultsViewer
+        submission={submissionResult}
+        questions={exam.questions}
+      />
+    );
+  }
+
+  // --- Taking / Submission mode ---
+  const interactiveMode = !reviewOnly && phase === "taking";
 
   return (
     <div className="space-y-6">
       {/* Exam header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground">{exam.title}</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+            {exam.title}
+          </h2>
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="rounded-full">
               {toTitleCase(exam.exam_mode)}
@@ -73,39 +171,88 @@ export function ExamViewer({ exam, workspaceId }: ExamViewerProps) {
             <span className="text-sm text-muted-foreground">
               {formatTimestamp(exam.created_at)}
             </span>
+            {interactiveMode && (
+              <span className="text-sm text-muted-foreground">
+                {answeredCount}/{exam.questions.length} answered
+              </span>
+            )}
           </div>
         </div>
 
-        <Button
-          id="exam-download-pdf-button"
-          variant="outline"
-          disabled={downloading}
-          onClick={() => void handleDownloadPdf()}
-        >
-          {downloading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Downloading...
-            </>
-          ) : (
-            <>
-              <Download className="mr-2 h-4 w-4" />
-              Download PDF
-            </>
-          )}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            id="exam-download-pdf-button"
+            variant="outline"
+            disabled={downloading}
+            onClick={() => void handleDownloadPdf()}
+          >
+            {downloading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Downloading...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {downloadError && (
-        <p id="exam-download-error" className="text-sm text-destructive">{downloadError}</p>
+        <p id="exam-download-error" className="text-sm text-destructive">
+          {downloadError}
+        </p>
+      )}
+
+      {submitError && (
+        <p className="text-sm text-destructive">{submitError}</p>
       )}
 
       {/* Questions */}
       <div className="space-y-4">
         {exam.questions.map((question) => (
-          <ExamQuestionCard key={question.id} question={question} />
+          <ExamQuestionCard
+            key={question.id}
+            question={question}
+            interactive={interactiveMode}
+            answer={answers[question.id] ?? ""}
+            onAnswerChange={
+              interactiveMode
+                ? (value) => handleAnswerChange(question.id, value)
+                : undefined
+            }
+          />
         ))}
       </div>
+
+      {/* Submit button */}
+      {interactiveMode && (
+        <div className="flex items-center justify-end gap-4 pt-2">
+          <span className="text-sm text-muted-foreground">
+            {answeredCount} of {exam.questions.length} answered
+          </span>
+          <Button
+            id="exam-submit-button"
+            disabled={submitting || answeredCount === 0}
+            onClick={() => void handleSubmit()}
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              <>
+                <Send className="mr-2 h-4 w-4" />
+                Submit Exam
+              </>
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
