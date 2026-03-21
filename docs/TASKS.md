@@ -245,4 +245,3 @@
 ## Future Phases
 
 Tasks for Phases 5–7 will be added as earlier phases are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
-Tasks for Phases 4 T-404+ and Phases 5–7 will be added as earlier tasks are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.

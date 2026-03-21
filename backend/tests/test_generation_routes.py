@@ -381,8 +381,7 @@ def test_get_exam_returns_404_for_wrong_workspace() -> None:
 
 
 def test_pdf_export_returns_503_if_pandoc_missing() -> None:
-    """If Pandoc is not installed, export raises ServiceUnavailableError."""
-    from backend.models.errors import ServiceUnavailableError
+    """If Pandoc is not installed, export falls back to the builtin PDF writer."""
     from backend.services.generation.pdf_export import export_exam_to_pdf
 
     assembly = _make_assembly(question_count=2)
@@ -390,12 +389,37 @@ def test_pdf_export_returns_503_if_pandoc_missing() -> None:
     with patch("backend.services.generation.pdf_export.subprocess.run") as mock_run:
         mock_run.side_effect = FileNotFoundError("pandoc not found")
 
-        with pytest.raises(ServiceUnavailableError, match="Pandoc"):
-            export_exam_to_pdf(
-                assembly=assembly,
-                output_dir="/tmp/test_export",
-                filename="test.pdf",
-            )
+        pdf_path = export_exam_to_pdf(
+            assembly=assembly,
+            output_dir="/tmp/test_export",
+            filename="test.pdf",
+        )
+
+    assert pdf_path.exists()
+    assert pdf_path.read_bytes().startswith(b"%PDF-")
+
+
+def test_pdf_export_falls_back_if_pandoc_fails() -> None:
+    """If Pandoc errors, export still succeeds via the builtin PDF writer."""
+    from backend.services.generation.pdf_export import export_exam_to_pdf
+
+    assembly = _make_assembly(question_count=2)
+
+    with patch("backend.services.generation.pdf_export.subprocess.run") as mock_run:
+        mock_run.side_effect = subprocess.CalledProcessError(
+            returncode=1,
+            cmd=["pandoc"],
+            stderr=b"latex engine unavailable",
+        )
+
+        pdf_path = export_exam_to_pdf(
+            assembly=assembly,
+            output_dir="/tmp/test_export",
+            filename="pandoc-failed.pdf",
+        )
+
+    assert pdf_path.exists()
+    assert pdf_path.read_bytes().startswith(b"%PDF-")
 
 
 def test_persist_assembly_creates_exam_and_questions() -> None:

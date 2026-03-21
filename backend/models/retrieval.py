@@ -49,14 +49,8 @@ class QuestionGenerationRetrievalRequest(BaseModel):
 
     @model_validator(mode="after")
     def normalize_topic(self) -> QuestionGenerationRetrievalRequest:
-        normalized_topic = self.topic_label.strip()
-        self.topic_label = normalized_topic
+        self.topic_label = self.topic_label.strip()
         self.query_text = _normalize_optional_text(self.query_text)
-
-        if self.scope.topic_label and self.scope.topic_label != normalized_topic:
-            raise ValueError("scope.topic_label must match topic_label for question retrieval")
-
-        self.scope.topic_label = normalized_topic
         return self
 
     @property

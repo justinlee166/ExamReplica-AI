@@ -1,0 +1,80 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 1424 >>
+stream
+BT
+/F1 12 Tf
+14 TL
+72 720 Td
+(Practice: HTTP Performance & Persistence, DNS Resolution Mechanics, Network Performance Metrics) Tj
+T*
+() Tj
+T*
+(Question 1) Tj
+T*
+(In the Domain Name System \(DNS\), a local DNS server is tasked with resolving a hostname) Tj
+T*
+(for which it has no cached records. If the local DNS server is configured to use) Tj
+T*
+(iterative queries, which of the following best describes the sequence of interactions) Tj
+T*
+(required to resolve the name?) Tj
+T*
+() Tj
+T*
+(Question 2) Tj
+T*
+(Consider a scenario where a client uses HTTP/1.1 with persistent connections \(without) Tj
+T*
+(pipelining\) to retrieve a base HTML file and 6 embedded images from a server. The Round) Tj
+T*
+(Trip Time \(RTT\) between the client and the server is 50 ms. Assume the transmission time) Tj
+T*
+(for the request messages and the small objects is negligible. How much total time \(in) Tj
+T*
+(milliseconds\) elapses from the moment the client initiates the TCP connection until the) Tj
+T*
+(last image is fully received?) Tj
+T*
+() Tj
+T*
+(Question 3) Tj
+T*
+(A point-to-point fiber optic link has a bandwidth of 10 Gbps and a length of 2,000 km.) Tj
+T*
+(The propagation speed of the signal in the fiber is 200,000 km/s. Calculate the) Tj
+T*
+(bandwidth-delay product for this link in bits. Additionally, determine the physical) Tj
+T*
+(length \(in meters\) of a single bit as it propagates through the fiber.) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000185 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1787
+%%EOF

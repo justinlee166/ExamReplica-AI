@@ -46,7 +46,7 @@ export function GenerationForm({ workspaceId, onCreated }: GenerationFormProps) 
   const [requestType, setRequestType] = useState<GenerationRequestType>("practice_set");
   const [formatType, setFormatType] = useState<GenerationFormatType>("mixed");
   const [questionCount, setQuestionCount] = useState<number>(DEFAULT_QUESTIONS);
-  const [difficulty, setDifficulty] = useState<GenerationDifficulty>("medium");
+  const [difficulty, setDifficulty] = useState<GenerationDifficulty>("moderate");
   const [questionTypes, setQuestionTypes] = useState<GenerationQuestionType[]>(["mcq", "frq"]);
   const [topics, setTopics] = useState("");
   const [customPrompt, setCustomPrompt] = useState("");
@@ -204,9 +204,9 @@ export function GenerationForm({ workspaceId, onCreated }: GenerationFormProps) 
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="moderate">Moderate</SelectItem>
+                  <SelectItem value="moderate-hard">Moderate-Hard</SelectItem>
                   <SelectItem value="hard">Hard</SelectItem>
-                  <SelectItem value="mixed">Mixed</SelectItem>
                 </SelectContent>
               </Select>
             </div>

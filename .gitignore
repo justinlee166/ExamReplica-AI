@@ -16,3 +16,5 @@ dist/
 .env*.local
 .DS_Store
 .vercel
+
+.claude

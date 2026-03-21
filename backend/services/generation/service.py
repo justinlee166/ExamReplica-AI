@@ -114,7 +114,7 @@ class GenerationService:
         workspace_id: UUID,
         scope_constraints: ScopeConstraints,
     ) -> list[RetrievedChunk]:
-        topic = scope_constraints.topics[0] if scope_constraints.topics else "general exam content"
+        topic = str(scope_constraints.topics[0]) if scope_constraints.topics else "exam questions and practice problems"
         request = QuestionGenerationRetrievalRequest(
             workspace_id=workspace_id,
             topic_label=topic,

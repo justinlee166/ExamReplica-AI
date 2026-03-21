@@ -135,7 +135,7 @@ export type GenerationRequestType = "practice_set" | "simulated_exam" | "targete
 
 export type GenerationFormatType = "mcq" | "frq" | "mixed";
 
-export type GenerationDifficulty = "easy" | "medium" | "hard" | "mixed";
+export type GenerationDifficulty = "easy" | "moderate" | "moderate-hard" | "hard";
 
 export type GenerationQuestionType = "mcq" | "frq" | "calculation" | "proof";
 
