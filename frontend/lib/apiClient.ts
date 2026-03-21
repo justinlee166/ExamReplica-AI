@@ -129,6 +129,77 @@ export type ProfessorProfile = {
   updated_at: string;
 };
 
+// --- Generation types ---
+
+export type GenerationRequestType = "practice_set" | "simulated_exam" | "targeted_regeneration";
+
+export type GenerationFormatType = "mcq" | "frq" | "mixed";
+
+export type GenerationDifficulty = "easy" | "medium" | "hard" | "mixed";
+
+export type GenerationQuestionType = "mcq" | "frq" | "calculation" | "proof";
+
+export type GenerationConfig = {
+  question_count: number;
+  format_type: GenerationFormatType;
+  difficulty: GenerationDifficulty;
+  question_types: GenerationQuestionType[];
+};
+
+export type ScopeConstraints = {
+  topics?: string[];
+  document_ids?: string[];
+  custom_prompt?: string;
+};
+
+export type GenerationRequestCreate = {
+  request_type: GenerationRequestType;
+  generation_config: GenerationConfig;
+  scope_constraints?: ScopeConstraints;
+};
+
+export type GenerationRequestStatus = "queued" | "running" | "completed" | "failed";
+
+export type GenerationRequestRead = {
+  id: string;
+  workspace_id: string;
+  status: GenerationRequestStatus;
+  generated_exam_id?: string | null;
+  error_message?: string | null;
+  created_at: string;
+};
+
+export type GeneratedExamSummary = {
+  id: string;
+  title: string;
+  exam_mode: string;
+  format_type: string;
+  created_at: string;
+};
+
+export type ExamQuestionOption = string;
+
+export type ExamQuestion = {
+  id: string;
+  question_order: number;
+  question_text: string;
+  question_type: string;
+  difficulty_label: string;
+  topic_label: string;
+  options?: ExamQuestionOption[] | null;
+  answer_key?: string | null;
+  explanation?: string | null;
+};
+
+export type GeneratedExamDetail = {
+  id: string;
+  title: string;
+  exam_mode: string;
+  format_type: string;
+  questions: ExamQuestion[];
+  created_at: string;
+};
+
 export class ApiError extends Error {
   status: number;
   detail?: unknown;
@@ -271,5 +342,53 @@ export const apiClient = {
       `/api/workspaces/${encodeURIComponent(workspaceId)}/profile/generate`,
       { method: "POST" },
     );
+  },
+
+  postGenerationRequest(
+    workspaceId: string,
+    body: GenerationRequestCreate,
+  ): Promise<GenerationRequestRead> {
+    return request<GenerationRequestRead>(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/generation-requests`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+  },
+
+  getGenerationRequest(
+    workspaceId: string,
+    requestId: string,
+  ): Promise<GenerationRequestRead> {
+    return request<GenerationRequestRead>(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/generation-requests/${encodeURIComponent(requestId)}`,
+    );
+  },
+
+  getExams(workspaceId: string): Promise<GeneratedExamSummary[]> {
+    return request<GeneratedExamSummary[]>(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/exams`,
+    );
+  },
+
+  getExamDetail(workspaceId: string, examId: string): Promise<GeneratedExamDetail> {
+    return request<GeneratedExamDetail>(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/exams/${encodeURIComponent(examId)}`,
+    );
+  },
+
+  async exportExamPdf(workspaceId: string, examId: string): Promise<Blob> {
+    const url = `${getBaseUrl()}/api/workspaces/${encodeURIComponent(workspaceId)}/exams/${encodeURIComponent(examId)}/export`;
+    const token = await getAccessToken();
+    const resp = await fetch(url, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) {
+      const detail = await resp.text().catch(() => "Export failed");
+      throw new ApiError(`Export failed: ${resp.status}`, resp.status, detail);
+    }
+    return resp.blob();
   },
 };

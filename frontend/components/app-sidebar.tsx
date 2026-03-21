@@ -10,6 +10,8 @@ import {
   GraduationCap,
   ChevronRight,
   Sparkles,
+  Wand2,
+  FileText,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +30,12 @@ export function AppSidebar() {
   const workspaceInsightsHref = activeWorkspaceId
     ? `/dashboard/workspaces/${activeWorkspaceId}/insights`
     : null;
+  const workspaceGenerateHref = activeWorkspaceId
+    ? `/dashboard/workspaces/${activeWorkspaceId}/generate`
+    : null;
+  const workspaceExamsHref = activeWorkspaceId
+    ? `/dashboard/workspaces/${activeWorkspaceId}/exams`
+    : null;
 
   const navigation = [
     { name: "All Workspaces", href: "/dashboard", icon: LayoutDashboard },
@@ -36,6 +44,12 @@ export function AppSidebar() {
       : []),
     ...(workspaceInsightsHref
       ? [{ name: "Workspace Insights", href: workspaceInsightsHref, icon: Sparkles }]
+      : []),
+    ...(workspaceGenerateHref
+      ? [{ name: "Generate", href: workspaceGenerateHref, icon: Wand2 }]
+      : []),
+    ...(workspaceExamsHref
+      ? [{ name: "Exams", href: workspaceExamsHref, icon: FileText }]
       : []),
   ];
 
