@@ -8,10 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { ExamQuestion } from "@/lib/apiClient";
 
 type ExamQuestionCardProps = {
   question: ExamQuestion;
+  /** When true, the card renders interactive answer inputs instead of read-only display. */
+  interactive?: boolean;
+  /** Current answer value (controlled). */
+  answer?: string;
+  /** Called when the user changes their answer. */
+  onAnswerChange?: (value: string) => void;
 };
 
 const OPTION_LABELS = ["A", "B", "C", "D", "E", "F", "G", "H"];
@@ -35,9 +42,17 @@ function toTitleCase(value: string): string {
     .replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
-export function ExamQuestionCard({ question }: ExamQuestionCardProps) {
+export function ExamQuestionCard({
+  question,
+  interactive,
+  answer,
+  onAnswerChange,
+}: ExamQuestionCardProps) {
   const [showAnswer, setShowAnswer] = useState(false);
-  const isMcq = question.question_type === "mcq" && question.options && question.options.length > 0;
+  const isMcq =
+    question.question_type === "mcq" &&
+    question.options &&
+    question.options.length > 0;
 
   return (
     <Card className="border-border/70">
@@ -50,7 +65,10 @@ export function ExamQuestionCard({ question }: ExamQuestionCardProps) {
           <Badge variant="outline" className="rounded-full">
             {question.question_type.toUpperCase()}
           </Badge>
-          <Badge variant="outline" className={`rounded-full ${difficultyClasses(question.difficulty_label)}`}>
+          <Badge
+            variant="outline"
+            className={`rounded-full ${difficultyClasses(question.difficulty_label)}`}
+          >
             {toTitleCase(question.difficulty_label)}
           </Badge>
           <Badge variant="secondary" className="rounded-full">
@@ -63,11 +81,13 @@ export function ExamQuestionCard({ question }: ExamQuestionCardProps) {
           {question.question_text}
         </p>
 
-        {/* MCQ options (read-only) */}
+        {/* MCQ options */}
         {isMcq && (
           <RadioGroup
             id={`question-${question.id}-options`}
-            disabled
+            disabled={!interactive}
+            value={interactive ? answer : undefined}
+            onValueChange={interactive ? onAnswerChange : undefined}
             className="space-y-2 pl-1"
           >
             {question.options!.map((option, idx) => {
@@ -75,8 +95,15 @@ export function ExamQuestionCard({ question }: ExamQuestionCardProps) {
               const optionId = `question-${question.id}-option-${label}`;
               return (
                 <div key={optionId} className="flex items-start gap-2">
-                  <RadioGroupItem value={label} id={optionId} className="mt-0.5" />
-                  <Label htmlFor={optionId} className="font-normal text-sm leading-6 text-foreground">
+                  <RadioGroupItem
+                    value={label}
+                    id={optionId}
+                    className="mt-0.5"
+                  />
+                  <Label
+                    htmlFor={optionId}
+                    className={`font-normal text-sm leading-6 text-foreground ${interactive ? "cursor-pointer" : ""}`}
+                  >
                     {label}) {option}
                   </Label>
                 </div>
@@ -85,8 +112,18 @@ export function ExamQuestionCard({ question }: ExamQuestionCardProps) {
           </RadioGroup>
         )}
 
-        {/* FRQ answer area label */}
-        {!isMcq && (
+        {/* FRQ answer area */}
+        {!isMcq && interactive && (
+          <Textarea
+            id={`question-${question.id}-answer`}
+            placeholder="Type your answer here..."
+            value={answer ?? ""}
+            onChange={(e) => onAnswerChange?.(e.target.value)}
+            className="min-h-[120px] resize-y"
+          />
+        )}
+
+        {!isMcq && !interactive && (
           <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-4">
             <p className="text-sm text-muted-foreground italic">
               Free-response answer area
@@ -94,55 +131,59 @@ export function ExamQuestionCard({ question }: ExamQuestionCardProps) {
           </div>
         )}
 
-        {/* Show Answer toggle */}
-        <Button
-          id={`question-${question.id}-toggle-answer`}
-          variant="ghost"
-          size="sm"
-          className="px-0 hover:bg-transparent"
-          onClick={() => setShowAnswer((prev) => !prev)}
-        >
-          {showAnswer ? (
-            <>
-              <ChevronUp className="mr-1 h-4 w-4" />
-              Hide Answer &amp; Explanation
-            </>
-          ) : (
-            <>
-              <ChevronDown className="mr-1 h-4 w-4" />
-              Show Answer &amp; Explanation
-            </>
-          )}
-        </Button>
+        {/* Show Answer toggle (hidden in interactive mode) */}
+        {!interactive && (
+          <>
+            <Button
+              id={`question-${question.id}-toggle-answer`}
+              variant="ghost"
+              size="sm"
+              className="px-0 hover:bg-transparent"
+              onClick={() => setShowAnswer((prev) => !prev)}
+            >
+              {showAnswer ? (
+                <>
+                  <ChevronUp className="mr-1 h-4 w-4" />
+                  Hide Answer &amp; Explanation
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="mr-1 h-4 w-4" />
+                  Show Answer &amp; Explanation
+                </>
+              )}
+            </Button>
 
-        {showAnswer && (
-          <div className="space-y-3 rounded-2xl border border-primary/15 bg-primary/5 p-4">
-            {question.answer_key && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Answer
-                </p>
-                <p className="mt-1 text-sm leading-6 text-foreground whitespace-pre-wrap">
-                  {question.answer_key}
-                </p>
+            {showAnswer && (
+              <div className="space-y-3 rounded-2xl border border-primary/15 bg-primary/5 p-4">
+                {question.answer_key && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Answer
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-foreground whitespace-pre-wrap">
+                      {question.answer_key}
+                    </p>
+                  </div>
+                )}
+                {question.explanation && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                      Explanation
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-foreground whitespace-pre-wrap">
+                      {question.explanation}
+                    </p>
+                  </div>
+                )}
+                {!question.answer_key && !question.explanation && (
+                  <p className="text-sm text-muted-foreground italic">
+                    No answer or explanation available for this question.
+                  </p>
+                )}
               </div>
             )}
-            {question.explanation && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  Explanation
-                </p>
-                <p className="mt-1 text-sm leading-6 text-foreground whitespace-pre-wrap">
-                  {question.explanation}
-                </p>
-              </div>
-            )}
-            {!question.answer_key && !question.explanation && (
-              <p className="text-sm text-muted-foreground italic">
-                No answer or explanation available for this question.
-              </p>
-            )}
-          </div>
+          </>
         )}
       </CardContent>
     </Card>
