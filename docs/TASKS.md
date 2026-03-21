@@ -205,9 +205,44 @@
   - All API calls go through the API client module
   - Sidebar navigation includes Generate and Exams links for active workspace
   - TypeScript strict mode, Shadcn/ui components, Tailwind CSS throughout
+### T-401: Database schema for generation entities
+- **Phase:** 4
+- **Status:** Complete
+- **Goal:** Create migration and Pydantic models for generation_requests, generated_exams, and generated_questions tables
+- **Acceptance Criteria:**
+  - `migrations/008_generation_tables.sql` creates all three tables with correct columns, types, FK references, CHECK constraints, and RLS policies
+  - `backend/models/generation.py` defines GenerationConfig, ScopeConstraints, GenerationRequestCreate, GenerationRequestRead, GeneratedExamSummary, GeneratedQuestionRead, GeneratedExamDetail
+  - All Literal-constrained status/type fields raise ValidationError on invalid values
+
+### T-402: GenerationService — Multi-Stage Pipeline
+- **Phase:** 4
+- **Status:** Complete
+- **Goal:** Implement the 6-stage generation pipeline as a Python service module
+- **Acceptance Criteria:**
+  - `GenerationService.run_pipeline()` is the single public entry point returning `FinalExamAssembly`
+  - All 6 stages (draft → validate → novelty → difficulty → MCQ distribution → assemble) are called sequentially
+  - Service does not write to the database
+  - All Gemini prompt strings live in `prompts.py`
+  - `GenerationError` is a subclass of `AppError`
+  - All 6 pytest tests pass
+
+### T-403: Generation API Routes + Background Job
+- **Phase:** 4
+- **Status:** Complete
+- **Goal:** Create all 5 generation endpoints, wire GenerationService into BackgroundTasks, PDF export
+- **Acceptance Criteria:**
+  - POST /generation-requests returns 202 and dispatches background job
+  - GET /generation-requests/{id} returns current status
+  - GET /exams returns summaries (no nested questions)
+  - GET /exams/{id} returns full exam with ordered questions
+  - GET /exams/{id}/export returns PDF via Pandoc (503 if missing)
+  - All workspace ownership validated before DB access
+  - Router registered in main.py
+  - All 7 pytest tests pass
 
 ---
 
 ## Future Phases
 
 Tasks for Phases 5–7 will be added as earlier phases are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
+Tasks for Phases 4 T-404+ and Phases 5–7 will be added as earlier tasks are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.

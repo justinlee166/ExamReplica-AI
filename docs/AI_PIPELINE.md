@@ -99,10 +99,12 @@ Evidence weighting:
 
 > ⚠️ **Critical Rule:** Profile tendencies are **soft signals**. A topic that appears frequently should influence generation, but must not force mechanical proportional reproduction.
 
-## Stage 6: Generation Pipeline (Multi-Stage)
+## Stage 6: Generation Pipeline (Multi-Stage) — Implemented
 
 **Input:** Retrieved chunks + Profile + user config
 **Output:** Practice set or simulated exam with answer key
+
+> **Implementation:** `backend/services/generation/` — `GenerationService.run_pipeline()` orchestrates all 6 stages sequentially via `pipeline.py`. Prompt strings live in `prompts.py`. Internal models in `models.py`. See T-402.
 
 Generation is **never a single LLM call**. The pipeline includes:
 

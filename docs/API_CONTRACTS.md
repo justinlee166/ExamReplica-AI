@@ -174,7 +174,9 @@ upload_label: "Midterm 1"  (optional)
 
 ---
 
-## Generation
+## Generation — Implemented (T-403)
+
+> **Implementation:** `backend/routes/generation.py` — all 5 endpoints below. Background job dispatched via `BackgroundTasks`. PDF export via `backend/services/generation/pdf_export.py`.
 
 ### `POST /api/workspaces/{workspace_id}/generation-requests`
 
