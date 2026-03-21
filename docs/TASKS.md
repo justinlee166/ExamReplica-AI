@@ -201,8 +201,20 @@
   - `backend/models/generation.py` defines GenerationConfig, ScopeConstraints, GenerationRequestCreate, GenerationRequestRead, GeneratedExamSummary, GeneratedQuestionRead, GeneratedExamDetail
   - All Literal-constrained status/type fields raise ValidationError on invalid values
 
+### T-402: GenerationService — Multi-Stage Pipeline
+- **Phase:** 4
+- **Status:** Complete
+- **Goal:** Implement the 6-stage generation pipeline as a Python service module
+- **Acceptance Criteria:**
+  - `GenerationService.run_pipeline()` is the single public entry point returning `FinalExamAssembly`
+  - All 6 stages (draft → validate → novelty → difficulty → MCQ distribution → assemble) are called sequentially
+  - Service does not write to the database
+  - All Gemini prompt strings live in `prompts.py`
+  - `GenerationError` is a subclass of `AppError`
+  - All 6 pytest tests pass
+
 ---
 
 ## Future Phases
 
-Tasks for Phases 4 T-402+ and Phases 5–7 will be added as earlier tasks are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
+Tasks for Phases 4 T-403+ and Phases 5–7 will be added as earlier tasks are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
