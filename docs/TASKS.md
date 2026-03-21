@@ -190,6 +190,24 @@
 
 ---
 
+## Phase 4: Practice and Exam Generation
+
+### T-404: Frontend Generation UI
+- **Phase:** 4
+- **Status:** Complete
+- **Goal:** Build the complete generation UI as a vertical slice within the existing Next.js frontend
+- **Acceptance Criteria:**
+  - Generation form page with request type, format type, question count (3–30), difficulty, question types, optional topics, and custom prompt
+  - Status polling page that polls every 3 seconds and redirects to exam viewer on completion
+  - Exam viewer page rendering all questions with MCQ options as A/B/C/D and Show Answer toggle
+  - Exam list page with empty state and card-per-exam navigation
+  - PDF Download button triggers browser file save via Blob URL
+  - All API calls go through the API client module
+  - Sidebar navigation includes Generate and Exams links for active workspace
+  - TypeScript strict mode, Shadcn/ui components, Tailwind CSS throughout
+
+---
+
 ## Future Phases
 
-Tasks for Phases 4–7 will be added as earlier phases are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
+Tasks for Phases 5–7 will be added as earlier phases are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
