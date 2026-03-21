@@ -159,6 +159,8 @@ Versioned snapshots of inferred tendencies. New version created when materials c
 
 ## Generation and Exam Entities
 
+> **Migration:** `migrations/008_generation_tables.sql` — creates `generation_requests`, `generated_exams`, `generated_questions` with CHECK constraints and RLS policies scoped to workspace owner.
+
 ### `generation_requests`
 
 User-issued generation requests.

@@ -190,6 +190,19 @@
 
 ---
 
+## Phase 4: Practice and Exam Generation
+
+### T-401: Database schema for generation entities
+- **Phase:** 4
+- **Status:** Complete
+- **Goal:** Create migration and Pydantic models for generation_requests, generated_exams, and generated_questions tables
+- **Acceptance Criteria:**
+  - `migrations/008_generation_tables.sql` creates all three tables with correct columns, types, FK references, CHECK constraints, and RLS policies
+  - `backend/models/generation.py` defines GenerationConfig, ScopeConstraints, GenerationRequestCreate, GenerationRequestRead, GeneratedExamSummary, GeneratedQuestionRead, GeneratedExamDetail
+  - All Literal-constrained status/type fields raise ValidationError on invalid values
+
+---
+
 ## Future Phases
 
-Tasks for Phases 4–7 will be added as earlier phases are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
+Tasks for Phases 4 T-402+ and Phases 5–7 will be added as earlier tasks are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
