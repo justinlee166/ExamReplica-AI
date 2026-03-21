@@ -84,7 +84,7 @@ class GeminiProfessorProfileClient:
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
             "generationConfig": {
                 "temperature": 0.1,
-                "responseMimeType": "application/json",
+                "response_mime_type": "application/json",
             },
         }
 
@@ -94,7 +94,7 @@ class GeminiProfessorProfileClient:
         try:
             return ProfessorProfileBase.model_validate_json(generated_text)
         except Exception as exc:
-            logger.warning("Gemini returned invalid professor profile JSON", exc_info=exc)
+            logger.warning("Gemini returned invalid professor profile JSON: %s", generated_text, exc_info=exc)
             raise UpstreamServiceError(
                 "Professor profile generation returned an invalid response schema"
             ) from exc
@@ -105,7 +105,18 @@ class GeminiProfessorProfileClient:
         workspace: WorkspaceResponse,
         retrieval: RetrievalResponse,
     ) -> str:
-        schema_json = json.dumps(ProfessorProfileBase.model_json_schema(), indent=2, sort_keys=True)
+        schema = ProfessorProfileBase.model_json_schema()
+        # Remove fields that the LLM shouldn't (and can't accurately) fill
+        if "evidence_summary" in schema.get("properties", {}):
+            ev_props = schema["properties"]["evidence_summary"].get("properties", {})
+            ev_props.pop("retrieved_document_ids", None)
+            ev_props.pop("retrieved_chunk_ids", None)
+            ev_props.pop("total_documents", None)
+            ev_props.pop("total_chunks", None)
+            ev_props.pop("source_counts", None)
+            ev_props.pop("retrieval_query", None)
+
+        schema_json = json.dumps(schema, indent=2, sort_keys=True)
         evidence_blocks = []
         for chunk in retrieval.results:
             evidence_blocks.append(
@@ -159,7 +170,9 @@ class GeminiProfessorProfileClient:
             raise ServiceUnavailableError("Gemini request failed") from exc
         except httpx.HTTPStatusError as exc:
             logger.warning(
-                "Gemini returned an HTTP error while generating a professor profile",
+                "Gemini returned an HTTP error while generating a professor profile: %s - Body: %s",
+                exc.response.status_code,
+                exc.response.text,
                 exc_info=exc,
             )
             raise UpstreamServiceError("Gemini rejected the professor profile request") from exc

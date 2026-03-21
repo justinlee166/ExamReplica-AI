@@ -168,7 +168,7 @@ upload_label: "Midterm 1"  (optional)
 
 ### `POST /api/workspaces/{workspace_id}/profile/generate`
 
-**Purpose:** Generate or regenerate the latest Professor Profile for a workspace using retrieved evidence and Gemini 1.5 Flash
+**Purpose:** Generate or regenerate the latest Professor Profile for a workspace using retrieved evidence and Gemini Flash
 
 **Response:** `200` — latest generated profile object
 

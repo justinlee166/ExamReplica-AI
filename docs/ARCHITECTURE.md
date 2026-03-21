@@ -31,7 +31,7 @@ ExamProfile AI is a **modular monolith** — all backend services run within a s
 │  └──────────────┘ └──────────────┘ └───────────┘  │
 ├───────────────────────────────────────────────────┤
 │              External Dependencies                  │
-│     Docling / Marker     │     Gemini 1.5 Flash    │
+│     Docling / Marker     │     Gemini Flash        │
 └───────────────────────────────────────────────────┘
 ```
 
@@ -79,7 +79,7 @@ Current implementation note:
 | **Docling (IBM)** | Primary document parser for complex PDFs |
 | **Marker** | Fallback parser with strong math support |
 | **Pandoc** | Markdown → PDF export for generated exams |
-| **Gemini 1.5 Flash** | LLM for generation, grading, profile construction |
+| **Gemini Flash** | LLM for generation, grading, profile construction |
 | **LlamaIndex** | RAG orchestration framework |
 
 ## End-to-End Data Flows

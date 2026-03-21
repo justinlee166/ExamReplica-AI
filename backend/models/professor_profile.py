@@ -105,8 +105,8 @@ class EvidenceSummary(BaseModel):
     total_documents: int = Field(ge=1)
     total_chunks: int = Field(ge=1)
     source_counts: list[SourceEvidenceCount] = Field(min_length=1)
-    retrieved_document_ids: list[UUID] = Field(min_length=1)
-    retrieved_chunk_ids: list[UUID] = Field(min_length=1)
+    retrieved_document_ids: list[UUID | str] = Field(default_factory=list)
+    retrieved_chunk_ids: list[UUID | str] = Field(default_factory=list)
     retrieval_query: str = Field(min_length=1, max_length=500)
     evidence_characterization: str = Field(min_length=1, max_length=1200)
 

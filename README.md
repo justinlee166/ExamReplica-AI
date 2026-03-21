@@ -60,6 +60,11 @@ export PYTHONPATH=$PYTHONPATH:.
 uvicorn backend.main:app --reload
 ```
 
+> **Required environment variables** — ensure `backend/.env` is populated before starting:
+> - `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET` — from your Supabase project settings
+> - `GEMINI_API_KEY` — from [Google AI Studio](https://aistudio.google.com/)
+> - `GEMINI_MODEL` — (optional) defaults to `gemini-flash-latest`
+
 The backend server will run at `http://localhost:8000`. API docs can be viewed at `http://localhost:8000/docs`.
 
 ## Documentation
