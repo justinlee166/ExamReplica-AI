@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from backend.config.settings import Settings, get_settings
 from backend.models.errors import AppError
 from backend.routes.documents import router as documents_router
+from backend.routes.generation import router as generation_router
 from backend.routes.health import router as health_router
 from backend.routes.profiles import router as profiles_router
 from backend.routes.workspaces import router as workspaces_router
@@ -44,6 +45,7 @@ def create_app(settings: Settings) -> FastAPI:
     app.include_router(workspaces_router, prefix="/api")
     app.include_router(documents_router, prefix="/api")
     app.include_router(profiles_router, prefix="/api")
+    app.include_router(generation_router, prefix="/api")
     return app
 
 

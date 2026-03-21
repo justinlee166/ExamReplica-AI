@@ -213,8 +213,22 @@
   - `GenerationError` is a subclass of `AppError`
   - All 6 pytest tests pass
 
+### T-403: Generation API Routes + Background Job
+- **Phase:** 4
+- **Status:** Complete
+- **Goal:** Create all 5 generation endpoints, wire GenerationService into BackgroundTasks, PDF export
+- **Acceptance Criteria:**
+  - POST /generation-requests returns 202 and dispatches background job
+  - GET /generation-requests/{id} returns current status
+  - GET /exams returns summaries (no nested questions)
+  - GET /exams/{id} returns full exam with ordered questions
+  - GET /exams/{id}/export returns PDF via Pandoc (503 if missing)
+  - All workspace ownership validated before DB access
+  - Router registered in main.py
+  - All 7 pytest tests pass
+
 ---
 
 ## Future Phases
 
-Tasks for Phases 4 T-403+ and Phases 5–7 will be added as earlier tasks are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
+Tasks for Phases 4 T-404+ and Phases 5–7 will be added as earlier tasks are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
