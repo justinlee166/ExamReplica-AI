@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import time
 from typing import Any
 from uuid import UUID
 
@@ -59,6 +60,7 @@ class GenerationService:
             scope_constraints=scope_constraints,
         )
 
+        self._logger.info("Workspace %s: starting stage 1 (draft)", workspace_id)
         drafts, prompt = stage_1_draft(
             gemini=self._gemini,
             chunks=chunks,
@@ -66,37 +68,42 @@ class GenerationService:
             generation_config=generation_config,
             scope_constraints=scope_constraints,
         )
-        self._logger.info("Stage 1 complete: %d draft questions generated", len(drafts))
+        self._logger.info("Workspace %s: stage 1 complete — %d draft questions", workspace_id, len(drafts))
 
+        self._logger.info("Workspace %s: starting stage 2 (structure validation)", workspace_id)
         validated = stage_2_validate(
             gemini=self._gemini,
             drafts=drafts,
             original_prompt=prompt,
             generation_config=generation_config,
         )
-        self._logger.info("Stage 2 complete: structure validated")
+        self._logger.info("Workspace %s: stage 2 complete — structure validated", workspace_id)
 
+        self._logger.info("Workspace %s: starting stage 3 (novelty check)", workspace_id)
         novel = stage_3_novelty(
             gemini=self._gemini,
             embedding=self._embedding,
             drafts=validated,
             chunks=chunks,
         )
-        self._logger.info("Stage 3 complete: novelty checked")
+        self._logger.info("Workspace %s: stage 3 complete — novelty checked", workspace_id)
 
+        self._logger.info("Workspace %s: starting stage 4 (difficulty calibration)", workspace_id)
         calibrated = stage_4_difficulty(
             gemini=self._gemini,
             drafts=novel,
             requested_difficulty=generation_config.difficulty,
         )
-        self._logger.info("Stage 4 complete: difficulty calibrated")
+        self._logger.info("Workspace %s: stage 4 complete — difficulty calibrated", workspace_id)
 
+        self._logger.info("Workspace %s: starting stage 5 (MCQ distribution)", workspace_id)
         balanced = stage_5_mcq_distribution(
             drafts=calibrated,
             format_type=generation_config.format_type,
         )
-        self._logger.info("Stage 5 complete: MCQ distribution corrected")
+        self._logger.info("Workspace %s: stage 5 complete — MCQ distribution corrected", workspace_id)
 
+        self._logger.info("Workspace %s: starting stage 6 (assembly)", workspace_id)
         assembly = stage_6_assemble(
             drafts=balanced,
             exam_mode=exam_mode,
@@ -104,7 +111,7 @@ class GenerationService:
             scope_constraints=scope_constraints,
             professor_profile=professor_profile,
         )
-        self._logger.info("Stage 6 complete: final assembly with %d questions", len(assembly.questions))
+        self._logger.info("Workspace %s: stage 6 complete — %d questions assembled", workspace_id, len(assembly.questions))
 
         return assembly
 
@@ -157,29 +164,44 @@ class GeminiGenerationCaller:
     def _post_generate_content(self, *, payload: dict[str, Any]) -> dict[str, Any]:
         url = f"{self._api_base_url}/models/{self._model_name}:generateContent"
         params = {"key": self._api_key}
+        _retry_delays = [2, 5]
+        _max_attempts = 3
+        last_exc: Exception | None = None
 
-        try:
-            if self._http_client is not None:
-                response = self._http_client.post(
-                    url, params=params, json=payload, timeout=self._timeout_seconds,
-                )
+        for attempt in range(1, _max_attempts + 1):
+            try:
+                if self._http_client is not None:
+                    response = self._http_client.post(
+                        url, params=params, json=payload, timeout=self._timeout_seconds,
+                    )
+                else:
+                    with httpx.Client(timeout=self._timeout_seconds) as client:
+                        response = client.post(url, params=params, json=payload)
+                response.raise_for_status()
+                data = response.json()
+            except httpx.HTTPStatusError as exc:
+                raise UpstreamServiceError("Gemini rejected the generation request") from exc
+            except ValueError as exc:
+                raise UpstreamServiceError("Gemini returned a non-JSON response") from exc
+            except (httpx.TimeoutException, httpx.RequestError) as exc:
+                last_exc = exc
+                if attempt < _max_attempts:
+                    delay = _retry_delays[attempt - 1]
+                    logger.warning(
+                        "Gemini call failed on attempt %d/%d (%s); retrying in %ds",
+                        attempt, _max_attempts, exc, delay,
+                    )
+                    time.sleep(delay)
+                    continue
+                break
             else:
-                with httpx.Client(timeout=self._timeout_seconds) as client:
-                    response = client.post(url, params=params, json=payload)
-            response.raise_for_status()
-            data = response.json()
-        except httpx.TimeoutException as exc:
-            raise ServiceUnavailableError("Gemini request timed out") from exc
-        except httpx.RequestError as exc:
-            raise ServiceUnavailableError("Gemini request failed") from exc
-        except httpx.HTTPStatusError as exc:
-            raise UpstreamServiceError("Gemini rejected the generation request") from exc
-        except ValueError as exc:
-            raise UpstreamServiceError("Gemini returned a non-JSON response") from exc
+                if not isinstance(data, dict):
+                    raise UpstreamServiceError("Gemini returned an unexpected response payload")
+                return data
 
-        if not isinstance(data, dict):
-            raise UpstreamServiceError("Gemini returned an unexpected response payload")
-        return data
+        if isinstance(last_exc, httpx.TimeoutException):
+            raise ServiceUnavailableError("Gemini request timed out after all retries") from last_exc
+        raise ServiceUnavailableError("Gemini request failed after all retries") from last_exc
 
     def _extract_text(self, payload: dict[str, Any]) -> str:
         candidates = payload.get("candidates")

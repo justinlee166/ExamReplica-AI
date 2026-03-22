@@ -80,12 +80,14 @@ def _run_generation_job(
         professor_profile = ProfessorProfileBase.model_validate(profile_data)
 
         generation_service = build_generation_service(settings=settings)
+        logger.info("Generation job %s: starting pipeline (workspace %s)", request_id, workspace_id)
         assembly = generation_service.run_pipeline(
             generation_config=body.generation_config,
             scope_constraints=body.scope_constraints,
             workspace_id=workspace_id,
             professor_profile=professor_profile,
         )
+        logger.info("Generation job %s: pipeline complete — %d questions", request_id, len(assembly.questions))
 
         _persist_assembly(
             supabase=supabase,
