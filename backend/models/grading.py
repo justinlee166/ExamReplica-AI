@@ -68,18 +68,20 @@ class SubmissionAnswerRead(BaseModel):
 class GradingResultCreate(BaseModel):
     submission_answer_id: UUID
     correctness_label: CorrectnessLabel
-    points_awarded: float = Field(ge=0)
+    score_value: float = Field(ge=0)
     points_possible: float = Field(gt=0)
-    feedback: str | None = None
+    diagnostic_explanation: str | None = None
+    concept_label: str | None = None
 
 
 class GradingResultRead(BaseModel):
     id: UUID
     submission_answer_id: UUID
     correctness_label: CorrectnessLabel
-    points_awarded: float
+    score_value: float
     points_possible: float
-    feedback: str | None = None
+    diagnostic_explanation: str | None = None
+    concept_label: str | None = None
     created_at: dt.datetime
     updated_at: dt.datetime
 

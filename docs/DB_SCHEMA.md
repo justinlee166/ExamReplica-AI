@@ -215,14 +215,20 @@ Individual questions within a generated exam.
 
 A user's submitted answers for a generated exam.
 
+> **Migration:** `migrations/009_submission_grading_tables.sql` — creates `submissions`, `submission_answers`, `grading_results`, `error_classifications` with CHECK constraints and RLS policies scoped to workspace owner.
+
 | Field | Type | Notes |
 |---|---|---|
 | `id` | UUID (PK) | |
-| `generated_exam_id` | UUID (FK → generated_exams) | |
+| `workspace_id` | UUID (FK → workspaces) | Scoping for route-level access |
 | `user_id` | UUID (FK → users) | |
-| `submitted_at` | TIMESTAMP | |
-| `raw_response_payload` | JSONB | Full answer payload |
-| `status` | VARCHAR | submitted, grading, graded |
+| `generated_exam_id` | UUID (FK → generated_exams) | |
+| `status` | VARCHAR | submitted, grading, graded, failed |
+| `submitted_at` | TIMESTAMP | Optional |
+| `overall_score` | NUMERIC | Aggregate score after grading |
+| `total_possible` | NUMERIC | Maximum possible score |
+| `created_at` | TIMESTAMP | |
+| `updated_at` | TIMESTAMP | |
 
 ### `submission_answers`
 
@@ -245,10 +251,12 @@ Structured evaluation for each answer.
 | `id` | UUID (PK) | |
 | `submission_answer_id` | UUID (FK → submission_answers) | |
 | `correctness_label` | VARCHAR | correct, partial, incorrect |
-| `score_value` | FLOAT | Numeric or fractional |
+| `score_value` | NUMERIC | Points awarded (0 to points_possible) |
+| `points_possible` | NUMERIC | Maximum points for this question |
 | `diagnostic_explanation` | TEXT | |
 | `concept_label` | VARCHAR | Mapped concept |
 | `created_at` | TIMESTAMP | |
+| `updated_at` | TIMESTAMP | |
 
 ### `error_classifications`
 
@@ -259,7 +267,8 @@ Normalized error-type labels.
 | `id` | UUID (PK) | |
 | `grading_result_id` | UUID (FK → grading_results) | |
 | `error_type` | VARCHAR | wrong_method, formula_misuse, computation_error, interpretation_error, incomplete_reasoning |
-| `severity` | VARCHAR | Optional |
+| `severity` | VARCHAR | Optional: minor, moderate, major |
+| `description` | TEXT | Optional explanation of the error |
 | `created_at` | TIMESTAMP | |
 
 ---

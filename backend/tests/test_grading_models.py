@@ -21,18 +21,18 @@ class TestCorrectnessLabel:
         result = GradingResultCreate(
             submission_answer_id="00000000-0000-0000-0000-000000000001",
             correctness_label=label,
-            points_awarded=1,
+            score_value=1,
             points_possible=1,
         )
         assert result.correctness_label == label
 
-    @pytest.mark.parametrize("label", ["wrong", "CORRECT", "Partial", "", "unknown"])
+    @pytest.mark.parametrize("label", ["wrong", "CORRECT", "Partial", "", "unknown", "true", "yes", "right"])
     def test_invalid_correctness_labels(self, label: str) -> None:
         with pytest.raises(ValidationError):
             GradingResultCreate(
                 submission_answer_id="00000000-0000-0000-0000-000000000001",
                 correctness_label=label,
-                points_awarded=1,
+                score_value=1,
                 points_possible=1,
             )
 
@@ -62,7 +62,7 @@ class TestErrorType:
 
     @pytest.mark.parametrize(
         "error_type",
-        ["typo", "WRONG_METHOD", "computation", "", "other"],
+        ["typo", "WRONG_METHOD", "computation", "", "other", "incorrect_answer"],
     )
     def test_invalid_error_types(self, error_type: str) -> None:
         with pytest.raises(ValidationError):
@@ -78,12 +78,12 @@ class TestErrorType:
 
 
 class TestGradingResultConstraints:
-    def test_negative_points_awarded_rejected(self) -> None:
+    def test_negative_score_value_rejected(self) -> None:
         with pytest.raises(ValidationError):
             GradingResultCreate(
                 submission_answer_id="00000000-0000-0000-0000-000000000001",
                 correctness_label="correct",
-                points_awarded=-1,
+                score_value=-1,
                 points_possible=1,
             )
 
@@ -92,7 +92,7 @@ class TestGradingResultConstraints:
             GradingResultCreate(
                 submission_answer_id="00000000-0000-0000-0000-000000000001",
                 correctness_label="correct",
-                points_awarded=0,
+                score_value=0,
                 points_possible=0,
             )
 

@@ -142,14 +142,15 @@ def _make_exam_row(*, exam_id: UUID, workspace_id: UUID) -> dict[str, Any]:
 
 
 def _make_question_row(
-    *, exam_id: UUID, question_order: int, question_id: UUID | None = None, answer_key: str = "A"
+    *, exam_id: UUID, question_order: int, question_id: UUID | None = None,
+    answer_key: str = "A", question_type: str = "mcq",
 ) -> dict[str, Any]:
     return {
         "id": str(question_id or uuid4()),
         "generated_exam_id": str(exam_id),
         "question_order": question_order,
         "question_text": f"Question {question_order}?",
-        "question_type": "mcq",
+        "question_type": question_type,
         "difficulty_label": "moderate",
         "topic_label": "calculus",
         "answer_key": answer_key,
@@ -186,6 +187,7 @@ def test_post_submission_returns_201() -> None:
     submission_payload = {
         "id": str(submission_id),
         "workspace_id": str(workspace_id),
+        "user_id": str(user_id),
         "generated_exam_id": str(exam_id),
         "status": "submitted",
     }
@@ -197,13 +199,13 @@ def test_post_submission_returns_201() -> None:
             "id": str(uuid4()),
             "submission_id": str(submission_id),
             "generated_question_id": str(q1_id),
-            "student_answer": "A",
+            "answer_content": "A",
         },
         {
             "id": str(uuid4()),
             "submission_id": str(submission_id),
             "generated_question_id": str(q2_id),
-            "student_answer": "C",
+            "answer_content": "C",
         },
     ]
     supabase.table("submission_answers").insert(answer_payloads).execute()
@@ -229,15 +231,16 @@ def test_get_submission_returns_status_submitted() -> None:
             "workspace_id": str(workspace_id),
             "generated_exam_id": str(exam_id),
             "status": "submitted",
-            "total_score": None,
-            "max_score": None,
+            "overall_score": None,
+            "total_possible": None,
+            "submitted_at": None,
             "created_at": dt.datetime.now(dt.UTC).isoformat(),
         }],
         "submission_answers": [{
             "id": str(answer_id),
             "submission_id": str(submission_id),
             "generated_question_id": str(q1_id),
-            "student_answer": "A",
+            "answer_content": "A",
             "created_at": dt.datetime.now(dt.UTC).isoformat(),
         }],
     })
@@ -262,20 +265,23 @@ def test_get_submission_returns_status_submitted() -> None:
     )
     answer_rows = _require_list(answers_resp.data)
 
+    from backend.models.submission import SubmissionAnswerRead
+
     result = SubmissionRead(
         id=sub_record["id"],
         workspace_id=sub_record["workspace_id"],
         generated_exam_id=sub_record["generated_exam_id"],
         status=sub_record["status"],
-        total_score=sub_record.get("total_score"),
-        max_score=sub_record.get("max_score"),
+        overall_score=sub_record.get("overall_score"),
+        total_possible=sub_record.get("total_possible"),
+        submitted_at=sub_record.get("submitted_at"),
         created_at=sub_record["created_at"],
         answers=[
-            {
-                "id": a["id"],
-                "generated_question_id": a["generated_question_id"],
-                "student_answer": a["student_answer"],
-            }
+            SubmissionAnswerRead(
+                id=a["id"],
+                question_id=a["generated_question_id"],
+                answer_content=a["answer_content"],
+            )
             for a in answer_rows
         ],
     )
@@ -283,7 +289,7 @@ def test_get_submission_returns_status_submitted() -> None:
     assert result.status == "submitted"
     assert len(result.answers) == 1
     assert result.answers[0].grading_result is None
-    assert result.total_score is None
+    assert result.overall_score is None
 
 
 def test_get_submission_graded_includes_results_and_errors() -> None:
@@ -305,8 +311,9 @@ def test_get_submission_graded_includes_results_and_errors() -> None:
             "workspace_id": str(workspace_id),
             "generated_exam_id": str(exam_id),
             "status": "graded",
-            "total_score": 1.0,
-            "max_score": 2.0,
+            "overall_score": 1.0,
+            "total_possible": 2.0,
+            "submitted_at": None,
             "created_at": dt.datetime.now(dt.UTC).isoformat(),
         }],
         "submission_answers": [
@@ -314,38 +321,36 @@ def test_get_submission_graded_includes_results_and_errors() -> None:
                 "id": str(answer1_id),
                 "submission_id": str(submission_id),
                 "generated_question_id": str(q1_id),
-                "student_answer": "A",
+                "answer_content": "A",
                 "created_at": dt.datetime.now(dt.UTC).isoformat(),
             },
             {
                 "id": str(answer2_id),
                 "submission_id": str(submission_id),
                 "generated_question_id": str(q2_id),
-                "student_answer": "C",
+                "answer_content": "C",
                 "created_at": dt.datetime.now(dt.UTC).isoformat(),
             },
         ],
         "grading_results": [
             {
                 "id": str(gr1_id),
-                "submission_id": str(submission_id),
                 "submission_answer_id": str(answer1_id),
-                "generated_question_id": str(q1_id),
-                "score": 1.0,
-                "max_score": 1.0,
-                "is_correct": True,
-                "feedback": "Correct!",
+                "correctness_label": "correct",
+                "score_value": 1.0,
+                "points_possible": 1.0,
+                "diagnostic_explanation": "Correct!",
+                "concept_label": "calculus",
                 "created_at": dt.datetime.now(dt.UTC).isoformat(),
             },
             {
                 "id": str(gr2_id),
-                "submission_id": str(submission_id),
                 "submission_answer_id": str(answer2_id),
-                "generated_question_id": str(q2_id),
-                "score": 0.0,
-                "max_score": 1.0,
-                "is_correct": False,
-                "feedback": "Expected: B",
+                "correctness_label": "incorrect",
+                "score_value": 0.0,
+                "points_possible": 1.0,
+                "diagnostic_explanation": "Expected: B",
+                "concept_label": "calculus",
                 "created_at": dt.datetime.now(dt.UTC).isoformat(),
             },
         ],
@@ -353,7 +358,7 @@ def test_get_submission_graded_includes_results_and_errors() -> None:
             {
                 "id": str(ec1_id),
                 "grading_result_id": str(gr2_id),
-                "error_type": "incorrect_answer",
+                "error_type": "wrong_method",
                 "description": "Student answered 'C' but expected 'B'",
                 "severity": "moderate",
                 "created_at": dt.datetime.now(dt.UTC).isoformat(),
@@ -380,10 +385,11 @@ def test_get_submission_graded_includes_results_and_errors() -> None:
     )
     answer_rows = _require_list(answers_resp.data)
 
+    answer_ids = [row["id"] for row in answer_rows]
     gr_resp = (
         supabase.table("grading_results")
         .select("*")
-        .eq("submission_id", str(submission_id))
+        .in_("submission_answer_id", answer_ids)
         .execute()
     )
     gr_rows = _require_list(gr_resp.data)
@@ -414,19 +420,20 @@ def test_get_submission_graded_includes_results_and_errors() -> None:
             ec_rows = ec_by_gr.get(gr_row["id"], [])
             grading_result = GradingResultRead(
                 id=gr_row["id"],
-                generated_question_id=gr_row["generated_question_id"],
-                score=gr_row["score"],
-                max_score=gr_row["max_score"],
-                is_correct=gr_row["is_correct"],
-                feedback=gr_row.get("feedback"),
+                question_id=a_row["generated_question_id"],
+                correctness_label=gr_row["correctness_label"],
+                score_value=gr_row["score_value"],
+                points_possible=gr_row["points_possible"],
+                diagnostic_explanation=gr_row.get("diagnostic_explanation"),
+                concept_label=gr_row.get("concept_label"),
                 error_classifications=[
                     ErrorClassificationRead.model_validate(ec) for ec in ec_rows
                 ],
             )
         answers.append(SubmissionAnswerRead(
             id=a_row["id"],
-            generated_question_id=a_row["generated_question_id"],
-            student_answer=a_row["student_answer"],
+            question_id=a_row["generated_question_id"],
+            answer_content=a_row["answer_content"],
             grading_result=grading_result,
         ))
 
@@ -435,31 +442,32 @@ def test_get_submission_graded_includes_results_and_errors() -> None:
         workspace_id=sub_record["workspace_id"],
         generated_exam_id=sub_record["generated_exam_id"],
         status=sub_record["status"],
-        total_score=sub_record.get("total_score"),
-        max_score=sub_record.get("max_score"),
+        overall_score=sub_record.get("overall_score"),
+        total_possible=sub_record.get("total_possible"),
+        submitted_at=sub_record.get("submitted_at"),
         created_at=sub_record["created_at"],
         answers=answers,
     )
 
     assert result.status == "graded"
-    assert result.total_score == 1.0
-    assert result.max_score == 2.0
+    assert result.overall_score == 1.0
+    assert result.total_possible == 2.0
     assert len(result.answers) == 2
 
     # First answer: correct, no error classifications
-    correct_answer = next(a for a in result.answers if a.generated_question_id == q1_id)
+    correct_answer = next(a for a in result.answers if a.question_id == q1_id)
     assert correct_answer.grading_result is not None
-    assert correct_answer.grading_result.is_correct is True
-    assert correct_answer.grading_result.score == 1.0
+    assert correct_answer.grading_result.correctness_label == "correct"
+    assert correct_answer.grading_result.score_value == 1.0
     assert correct_answer.grading_result.error_classifications == []
 
     # Second answer: incorrect, has error classification
-    incorrect_answer = next(a for a in result.answers if a.generated_question_id == q2_id)
+    incorrect_answer = next(a for a in result.answers if a.question_id == q2_id)
     assert incorrect_answer.grading_result is not None
-    assert incorrect_answer.grading_result.is_correct is False
-    assert incorrect_answer.grading_result.score == 0.0
+    assert incorrect_answer.grading_result.correctness_label == "incorrect"
+    assert incorrect_answer.grading_result.score_value == 0.0
     assert len(incorrect_answer.grading_result.error_classifications) == 1
-    assert incorrect_answer.grading_result.error_classifications[0].error_type == "incorrect_answer"
+    assert incorrect_answer.grading_result.error_classifications[0].error_type == "wrong_method"
     assert incorrect_answer.grading_result.error_classifications[0].severity == "moderate"
 
 
@@ -477,15 +485,16 @@ def test_grading_job_sets_status_to_graded() -> None:
             "workspace_id": str(workspace_id),
             "generated_exam_id": str(exam_id),
             "status": "submitted",
-            "total_score": None,
-            "max_score": None,
+            "overall_score": None,
+            "total_possible": None,
+            "submitted_at": None,
             "created_at": dt.datetime.now(dt.UTC).isoformat(),
         }],
         "submission_answers": [{
             "id": str(answer_id),
             "submission_id": str(submission_id),
             "generated_question_id": str(q1_id),
-            "student_answer": "A",
+            "answer_content": "A",
             "created_at": dt.datetime.now(dt.UTC).isoformat(),
         }],
         "generated_questions": [
@@ -500,14 +509,16 @@ def test_grading_job_sets_status_to_graded() -> None:
     # Verify final status is graded
     sub_row = supabase.tables["submissions"][0]
     assert sub_row["status"] == "graded"
-    assert sub_row["total_score"] == 1.0
-    assert sub_row["max_score"] == 1.0
+    assert sub_row["overall_score"] == 1.0
+    assert sub_row["total_possible"] == 1.0
 
-    # Verify grading results were created
+    # Verify grading results were created with canonical column names
     assert len(supabase.tables["grading_results"]) == 1
     gr = supabase.tables["grading_results"][0]
-    assert gr["is_correct"] is True
-    assert gr["score"] == 1.0
+    assert gr["correctness_label"] == "correct"
+    assert gr["score_value"] == 1.0
+    assert gr["points_possible"] == 1.0
+    assert gr["diagnostic_explanation"] == "Correct!"
 
     # No error classifications for correct answers
     assert len(supabase.tables["error_classifications"]) == 0
@@ -527,15 +538,16 @@ def test_grading_job_handles_incorrect_answer() -> None:
             "workspace_id": str(workspace_id),
             "generated_exam_id": str(exam_id),
             "status": "submitted",
-            "total_score": None,
-            "max_score": None,
+            "overall_score": None,
+            "total_possible": None,
+            "submitted_at": None,
             "created_at": dt.datetime.now(dt.UTC).isoformat(),
         }],
         "submission_answers": [{
             "id": str(answer_id),
             "submission_id": str(submission_id),
             "generated_question_id": str(q1_id),
-            "student_answer": "C",
+            "answer_content": "C",
             "created_at": dt.datetime.now(dt.UTC).isoformat(),
         }],
         "generated_questions": [
@@ -549,16 +561,17 @@ def test_grading_job_handles_incorrect_answer() -> None:
 
     sub_row = supabase.tables["submissions"][0]
     assert sub_row["status"] == "graded"
-    assert sub_row["total_score"] == 0.0
-    assert sub_row["max_score"] == 1.0
+    assert sub_row["overall_score"] == 0.0
+    assert sub_row["total_possible"] == 1.0
 
     assert len(supabase.tables["grading_results"]) == 1
     gr = supabase.tables["grading_results"][0]
-    assert gr["is_correct"] is False
+    assert gr["correctness_label"] == "incorrect"
+    assert gr["score_value"] == 0.0
 
     assert len(supabase.tables["error_classifications"]) == 1
     ec = supabase.tables["error_classifications"][0]
-    assert ec["error_type"] == "incorrect_answer"
+    assert ec["error_type"] == "wrong_method"
     assert ec["severity"] == "moderate"
 
 

@@ -57,11 +57,35 @@ def _run_grading_job(*, submission_id: UUID, supabase: Client) -> None:
         ).eq("id", str(submission_id)).execute()
 
         grading_service = GradingService(supabase)
-        grading_service.grade_submission(submission_id)
+        result = grading_service.grade_submission(submission_id)
 
-        supabase.table("submissions").update(
-            {"status": "graded"}
-        ).eq("id", str(submission_id)).execute()
+        # Persist grading results to DB
+        for ga in result.graded_answers:
+            gr_id = uuid4()
+            grading_payload = {
+                "id": str(gr_id),
+                "submission_answer_id": str(ga.submission_answer_id),
+                "correctness_label": ga.correctness_label,
+                "score_value": ga.points_awarded,
+                "points_possible": ga.points_possible,
+                "diagnostic_explanation": ga.feedback,
+                "concept_label": ga.concept_label,
+            }
+            supabase.table("grading_results").insert(grading_payload).execute()
+
+            for ec in ga.error_classifications:
+                supabase.table("error_classifications").insert({
+                    "grading_result_id": str(gr_id),
+                    "error_type": ec.error_type,
+                    "description": ec.description,
+                    "severity": "moderate",
+                }).execute()
+
+        supabase.table("submissions").update({
+            "status": "graded",
+            "overall_score": result.total_score,
+            "total_possible": result.max_score,
+        }).eq("id", str(submission_id)).execute()
 
         logger.info("Submission %s graded successfully", submission_id)
 
@@ -106,6 +130,7 @@ async def create_submission(
     submission_payload = {
         "id": str(submission_id),
         "workspace_id": str(workspace_id),
+        "user_id": str(user.id),
         "generated_exam_id": str(exam_id),
         "status": "submitted",
     }
@@ -118,8 +143,8 @@ async def create_submission(
         {
             "id": str(uuid4()),
             "submission_id": str(submission_id),
-            "generated_question_id": str(a.generated_question_id),
-            "student_answer": a.student_answer,
+            "generated_question_id": str(a.question_id),
+            "answer_content": a.answer_content,
         }
         for a in body.answers
     ]
@@ -169,14 +194,17 @@ async def get_submission(
     # Build answer list, joining grading results if graded
     answers: list[SubmissionAnswerRead] = []
     if sub_record.get("status") == "graded":
-        # Fetch all grading results for this submission
-        gr_resp = (
-            supabase.table("grading_results")
-            .select("*")
-            .eq("submission_id", str(submission_id))
-            .execute()
-        )
-        gr_rows = _require_list(gr_resp.data)
+        # Fetch all grading results for this submission's answers
+        answer_ids = [row["id"] for row in answer_rows]
+        gr_rows: list[dict[str, Any]] = []
+        if answer_ids:
+            gr_resp = (
+                supabase.table("grading_results")
+                .select("*")
+                .in_("submission_answer_id", answer_ids)
+                .execute()
+            )
+            gr_rows = _require_list(gr_resp.data)
         gr_by_answer: dict[str, dict[str, Any]] = {
             row["submission_answer_id"]: row for row in gr_rows
         }
@@ -201,27 +229,28 @@ async def get_submission(
                 ec_rows = ec_by_gr.get(gr_row["id"], [])
                 grading_result = GradingResultRead(
                     id=gr_row["id"],
-                    generated_question_id=gr_row["generated_question_id"],
-                    score=gr_row["score"],
-                    max_score=gr_row["max_score"],
-                    is_correct=gr_row["is_correct"],
-                    feedback=gr_row.get("feedback"),
+                    question_id=a_row["generated_question_id"],
+                    correctness_label=gr_row["correctness_label"],
+                    score_value=gr_row["score_value"],
+                    points_possible=gr_row["points_possible"],
+                    diagnostic_explanation=gr_row.get("diagnostic_explanation"),
+                    concept_label=gr_row.get("concept_label"),
                     error_classifications=[
                         ErrorClassificationRead.model_validate(ec) for ec in ec_rows
                     ],
                 )
             answers.append(SubmissionAnswerRead(
                 id=a_row["id"],
-                generated_question_id=a_row["generated_question_id"],
-                student_answer=a_row["student_answer"],
+                question_id=a_row["generated_question_id"],
+                answer_content=a_row["answer_content"],
                 grading_result=grading_result,
             ))
     else:
         for a_row in answer_rows:
             answers.append(SubmissionAnswerRead(
                 id=a_row["id"],
-                generated_question_id=a_row["generated_question_id"],
-                student_answer=a_row["student_answer"],
+                question_id=a_row["generated_question_id"],
+                answer_content=a_row["answer_content"],
             ))
 
     return SubmissionRead(
@@ -229,8 +258,9 @@ async def get_submission(
         workspace_id=sub_record["workspace_id"],
         generated_exam_id=sub_record["generated_exam_id"],
         status=sub_record["status"],
-        total_score=sub_record.get("total_score"),
-        max_score=sub_record.get("max_score"),
+        overall_score=sub_record.get("overall_score"),
+        total_possible=sub_record.get("total_possible"),
+        submitted_at=sub_record.get("submitted_at"),
         created_at=sub_record["created_at"],
         answers=answers,
     )

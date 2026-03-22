@@ -7,6 +7,14 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 SubmissionStatus = Literal["submitted", "grading", "graded", "failed"]
+CorrectnessLabel = Literal["correct", "partial", "incorrect"]
+ErrorType = Literal[
+    "wrong_method",
+    "formula_misuse",
+    "computation_error",
+    "interpretation_error",
+    "incomplete_reasoning",
+]
 ErrorSeverity = Literal["minor", "moderate", "major"]
 
 
@@ -14,8 +22,8 @@ ErrorSeverity = Literal["minor", "moderate", "major"]
 
 
 class AnswerItem(BaseModel):
-    generated_question_id: UUID
-    student_answer: str
+    question_id: UUID
+    answer_content: str = Field(min_length=1)
 
 
 class SubmissionCreate(BaseModel):
@@ -33,25 +41,26 @@ class SubmissionCreatedResponse(BaseModel):
 
 class ErrorClassificationRead(BaseModel):
     id: UUID
-    error_type: str
+    error_type: ErrorType
     description: str | None = None
-    severity: ErrorSeverity
+    severity: ErrorSeverity | None = None
 
 
 class GradingResultRead(BaseModel):
     id: UUID
-    generated_question_id: UUID
-    score: float
-    max_score: float
-    is_correct: bool
-    feedback: str | None = None
+    question_id: UUID
+    correctness_label: CorrectnessLabel
+    score_value: float
+    points_possible: float
+    diagnostic_explanation: str | None = None
+    concept_label: str | None = None
     error_classifications: list[ErrorClassificationRead] = Field(default_factory=list)
 
 
 class SubmissionAnswerRead(BaseModel):
     id: UUID
-    generated_question_id: UUID
-    student_answer: str
+    question_id: UUID
+    answer_content: str
     grading_result: GradingResultRead | None = None
 
 
@@ -60,7 +69,8 @@ class SubmissionRead(BaseModel):
     workspace_id: UUID
     generated_exam_id: UUID
     status: SubmissionStatus
-    total_score: float | None = None
-    max_score: float | None = None
+    overall_score: float | None = None
+    total_possible: float | None = None
+    submitted_at: dt.datetime | None = None
     created_at: dt.datetime
     answers: list[SubmissionAnswerRead] = Field(default_factory=list)
