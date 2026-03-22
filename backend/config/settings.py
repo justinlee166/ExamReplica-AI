@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-1.5-flash"
     gemini_api_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
-    gemini_timeout_seconds: float = 30.0
+    gemini_timeout_seconds: float = 120.0
 
     chroma_persist_directory: str = "./storage/chromadb"
     chroma_collection_name: str = "document_chunks"
