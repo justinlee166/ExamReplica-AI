@@ -49,6 +49,8 @@ export function ExamQuestionCard({
   onAnswerChange,
 }: ExamQuestionCardProps) {
   const [showAnswer, setShowAnswer] = useState(false);
+  // Scratch work textarea state for MCQ — not submitted as the answer.
+  const [mcqWork, setMcqWork] = useState("");
   const isMcq =
     question.question_type === "mcq" &&
     question.options &&
@@ -110,6 +112,25 @@ export function ExamQuestionCard({
               );
             })}
           </RadioGroup>
+        )}
+
+        {/* MCQ scratch-work area (interactive only, not submitted as the answer) */}
+        {isMcq && interactive && (
+          <div className="space-y-1.5">
+            <Label
+              htmlFor={`question-${question.id}-work`}
+              className="text-xs text-muted-foreground"
+            >
+              Show your work (optional)
+            </Label>
+            <Textarea
+              id={`question-${question.id}-work`}
+              placeholder="Show your reasoning here (optional)..."
+              value={mcqWork}
+              onChange={(e) => setMcqWork(e.target.value)}
+              className="min-h-[80px] resize-y text-sm"
+            />
+          </div>
         )}
 
         {/* FRQ answer area */}

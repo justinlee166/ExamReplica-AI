@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, BackgroundTasks, Depends
 from supabase import Client
 
+from backend.config.settings import Settings, get_settings
 from backend.config.supabase_client import get_admin_client, get_user_client
 from backend.middleware.auth import AuthenticatedUser, get_current_user
 from backend.models.errors import NotFoundError
@@ -18,7 +19,8 @@ from backend.models.submission import (
     SubmissionCreatedResponse,
     SubmissionRead,
 )
-from backend.services.grading.service import GradingService
+from backend.services.grading.grader import GradingService
+from backend.services.grading.service import build_grading_service_from_supabase
 from backend.services.workspaces.workspace_service import WorkspaceService
 
 logger = logging.getLogger(__name__)
@@ -50,14 +52,33 @@ def _require_list(data: Any) -> list[dict[str, Any]]:
 # --- Background job ---
 
 
-def _run_grading_job(*, submission_id: UUID, supabase: Client) -> None:
+def _run_grading_job(
+    *,
+    submission_id: UUID,
+    supabase: Client,
+    settings: Settings | None = None,
+    _grading_service: GradingService | None = None,
+) -> None:
+    """Run the grading pipeline for a submitted exam.
+
+    ``_grading_service`` may be injected by tests to avoid real Gemini calls.
+    When omitted, a real service is built from ``supabase`` and ``settings``.
+    """
     try:
         supabase.table("submissions").update(
             {"status": "grading"}
         ).eq("id", str(submission_id)).execute()
 
-        grading_service = GradingService(supabase)
-        result = grading_service.grade_submission(submission_id)
+        if _grading_service is not None:
+            grading_service: GradingService = _grading_service
+        else:
+            if settings is None:
+                raise ValueError("settings is required when _grading_service is not provided")
+            grading_service = build_grading_service_from_supabase(
+                supabase=supabase,
+                settings=settings,
+            )
+        result = grading_service.grade_submission(str(submission_id))
 
         # Persist grading results to DB
         for ga in result.graded_answers:
@@ -110,6 +131,7 @@ async def create_submission(
     body: SubmissionCreate,
     background_tasks: BackgroundTasks,
     user: AuthenticatedUser = Depends(get_current_user),
+    settings: Settings = Depends(get_settings),
     supabase: Client = Depends(get_user_client),
     admin_supabase: Client = Depends(get_admin_client),
 ) -> SubmissionCreatedResponse:
@@ -154,6 +176,7 @@ async def create_submission(
         _run_grading_job,
         submission_id=submission_id,
         supabase=admin_supabase,
+        settings=settings,
     )
 
     return SubmissionCreatedResponse.model_validate(submission_record)

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends
+from fastapi import APIRouter, BackgroundTasks, Depends, Query
 from fastapi.responses import FileResponse
 from supabase import Client
 
@@ -136,6 +136,7 @@ def _persist_assembly(
             "topic_label": q.topic_label,
             "answer_key": q.answer_key,
             "explanation": q.explanation,
+            "options": q.options,
         }
         for q in assembly.questions
     ]
@@ -274,6 +275,10 @@ async def get_exam_detail(
 async def export_exam_pdf(
     workspace_id: UUID,
     exam_id: UUID,
+    mode: Literal["questions", "solutions"] = Query(
+        default="questions",
+        description="'questions' omits answers; 'solutions' includes full worked solutions.",
+    ),
     user: AuthenticatedUser = Depends(get_current_user),
     settings: Settings = Depends(get_settings),
     supabase: Client = Depends(get_user_client),
@@ -297,20 +302,24 @@ async def export_exam_pdf(
     )
 
     output_dir = f"{settings.local_storage_root}/exports/{workspace_id}"
+    filename = f"{exam_id}.pdf" if mode == "questions" else f"{exam_id}_solutions.pdf"
     pdf_path = export_exam_to_pdf(
         assembly=assembly,
         output_dir=output_dir,
-        filename=f"{exam_id}.pdf",
+        filename=filename,
+        mode=mode,
     )
 
-    supabase.table("generated_exams").update(
-        {"rendered_artifact_path": str(pdf_path)}
-    ).eq("id", str(exam_id)).execute()
+    if mode == "questions":
+        supabase.table("generated_exams").update(
+            {"rendered_artifact_path": str(pdf_path)}
+        ).eq("id", str(exam_id)).execute()
 
+    download_filename = "exam.pdf" if mode == "questions" else "exam_solutions.pdf"
     return FileResponse(
         path=str(pdf_path),
         media_type="application/pdf",
-        filename="exam.pdf",
+        filename=download_filename,
     )
 
 
