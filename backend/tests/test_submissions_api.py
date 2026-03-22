@@ -16,6 +16,55 @@ from backend.routes.submissions import (
     _require_single,
     _run_grading_job,
 )
+from backend.services.grading.grader import build_grading_service
+from backend.services.grading.service import SupabaseSubmissionStore
+
+
+# --- Fake Gemini for grading tests ---
+
+
+class _FakeGemini:
+    def __init__(self, responses: list[str]) -> None:
+        self._responses = responses
+        self._idx = 0
+
+    def call_gemini(self, *, prompt: str) -> str:
+        resp = self._responses[min(self._idx, len(self._responses) - 1)]
+        self._idx += 1
+        return resp
+
+
+def _correct_llm_response() -> str:
+    import json
+    return json.dumps({
+        "correctness_label": "correct",
+        "score_value": 1.0,
+        "diagnostic_explanation": (
+            "The student selected option A, which is the correct answer. "
+            "The reasoning is sound and the concept is well understood."
+        ),
+        "concept_label": "mcq evaluation",
+        "error_classifications": [],
+    })
+
+
+def _incorrect_llm_response() -> str:
+    import json
+    return json.dumps({
+        "correctness_label": "incorrect",
+        "score_value": 0.0,
+        "diagnostic_explanation": (
+            "The student selected option C, but the correct answer is A. "
+            "This indicates a misunderstanding of the underlying concept."
+        ),
+        "concept_label": "mcq evaluation",
+        "error_classifications": [
+            {
+                "error_type": "wrong_method",
+                "description": "Selected the wrong answer choice; correct answer was A.",
+            },
+        ],
+    })
 
 
 # --- Fake Supabase (same pattern as test_generation_routes.py) ---
@@ -504,7 +553,15 @@ def test_grading_job_sets_status_to_graded() -> None:
         "error_classifications": [],
     })
 
-    _run_grading_job(submission_id=submission_id, supabase=supabase)
+    grading_service = build_grading_service(
+        gemini_caller=_FakeGemini([_correct_llm_response()]),
+        submission_store=SupabaseSubmissionStore(supabase),
+    )
+    _run_grading_job(
+        submission_id=submission_id,
+        supabase=supabase,
+        _grading_service=grading_service,
+    )
 
     # Verify final status is graded
     sub_row = supabase.tables["submissions"][0]
@@ -518,7 +575,7 @@ def test_grading_job_sets_status_to_graded() -> None:
     assert gr["correctness_label"] == "correct"
     assert gr["score_value"] == 1.0
     assert gr["points_possible"] == 1.0
-    assert gr["diagnostic_explanation"] == "Correct!"
+    assert gr["diagnostic_explanation"]  # LLM-produced — non-empty
 
     # No error classifications for correct answers
     assert len(supabase.tables["error_classifications"]) == 0
@@ -557,7 +614,15 @@ def test_grading_job_handles_incorrect_answer() -> None:
         "error_classifications": [],
     })
 
-    _run_grading_job(submission_id=submission_id, supabase=supabase)
+    grading_service = build_grading_service(
+        gemini_caller=_FakeGemini([_incorrect_llm_response()]),
+        submission_store=SupabaseSubmissionStore(supabase),
+    )
+    _run_grading_job(
+        submission_id=submission_id,
+        supabase=supabase,
+        _grading_service=grading_service,
+    )
 
     sub_row = supabase.tables["submissions"][0]
     assert sub_row["status"] == "graded"

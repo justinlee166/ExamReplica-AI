@@ -5,11 +5,14 @@ import subprocess
 import tempfile
 import textwrap
 from pathlib import Path
+from typing import Literal
 
 from backend.models.errors import ServiceUnavailableError
 from backend.services.generation.models import FinalExamAssembly
 
 logger = logging.getLogger(__name__)
+
+ExportMode = Literal["questions", "solutions"]
 
 
 def export_exam_to_pdf(
@@ -17,9 +20,14 @@ def export_exam_to_pdf(
     assembly: FinalExamAssembly,
     output_dir: str,
     filename: str = "exam.pdf",
+    mode: ExportMode = "questions",
 ) -> Path:
-    """Convert a FinalExamAssembly to PDF via Pandoc. Returns the output path."""
-    markdown = _render_markdown(assembly)
+    """Convert a FinalExamAssembly to PDF via Pandoc (falls back to built-in).
+
+    mode="questions"  — questions and MCQ choices only; no answers or explanations.
+    mode="solutions"  — questions followed by the correct answer and full worked solution.
+    """
+    markdown = _render_markdown(assembly, mode=mode)
     output_path = Path(output_dir) / filename
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -39,20 +47,20 @@ def export_exam_to_pdf(
             "Pandoc failed, falling back to builtin PDF exporter: %s",
             exc.stderr.decode() if exc.stderr else "unknown error",
         )
-        _write_builtin_pdf(output_path=output_path, assembly=assembly)
-    except subprocess.TimeoutExpired as exc:
+        _write_builtin_pdf(output_path=output_path, assembly=assembly, mode=mode)
+    except subprocess.TimeoutExpired:
         logger.warning("Pandoc timed out, falling back to builtin PDF exporter")
-        _write_builtin_pdf(output_path=output_path, assembly=assembly)
+        _write_builtin_pdf(output_path=output_path, assembly=assembly, mode=mode)
     except FileNotFoundError:
         logger.warning("Pandoc is not installed, falling back to builtin PDF exporter")
-        _write_builtin_pdf(output_path=output_path, assembly=assembly)
+        _write_builtin_pdf(output_path=output_path, assembly=assembly, mode=mode)
     finally:
         Path(tmp_path).unlink(missing_ok=True)
 
     return output_path
 
 
-def _render_markdown(assembly: FinalExamAssembly) -> str:
+def _render_markdown(assembly: FinalExamAssembly, *, mode: ExportMode) -> str:
     lines: list[str] = [f"# {assembly.title}", ""]
 
     for question in assembly.questions:
@@ -67,11 +75,23 @@ def _render_markdown(assembly: FinalExamAssembly) -> str:
                 lines.append(f"- **{letter}.** {option}")
             lines.append("")
 
+        if mode == "solutions":
+            if question.answer_key:
+                lines.append(f"**Answer:** {question.answer_key}")
+                lines.append("")
+            if question.explanation:
+                lines.append("**Solution:**")
+                lines.append("")
+                lines.append(question.explanation)
+                lines.append("")
+
     return "\n".join(lines)
 
 
-def _write_builtin_pdf(*, output_path: Path, assembly: FinalExamAssembly) -> None:
-    pages = _paginate_lines(_render_text_lines(assembly))
+def _write_builtin_pdf(
+    *, output_path: Path, assembly: FinalExamAssembly, mode: ExportMode
+) -> None:
+    pages = _paginate_lines(_render_text_lines(assembly, mode=mode))
     pdf_bytes = _build_pdf_document(pages)
 
     try:
@@ -80,7 +100,7 @@ def _write_builtin_pdf(*, output_path: Path, assembly: FinalExamAssembly) -> Non
         raise ServiceUnavailableError("PDF export failed") from exc
 
 
-def _render_text_lines(assembly: FinalExamAssembly) -> list[str]:
+def _render_text_lines(assembly: FinalExamAssembly, *, mode: ExportMode) -> list[str]:
     lines = [assembly.title, ""]
 
     for question in assembly.questions:
@@ -93,6 +113,15 @@ def _render_text_lines(assembly: FinalExamAssembly) -> list[str]:
                 letter = chr(65 + i)
                 lines.extend(_wrap_line(f"{letter}. {option}"))
             lines.append("")
+
+        if mode == "solutions":
+            if question.answer_key:
+                lines.extend(_wrap_line(f"Answer: {question.answer_key}"))
+                lines.append("")
+            if question.explanation:
+                lines.append("Solution:")
+                lines.extend(_wrap_line(question.explanation))
+                lines.append("")
 
     return lines
 

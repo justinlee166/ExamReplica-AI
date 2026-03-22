@@ -463,8 +463,12 @@ export const apiClient = {
     );
   },
 
-  async exportExamPdf(workspaceId: string, examId: string): Promise<Blob> {
-    const url = `${getBaseUrl()}/api/workspaces/${encodeURIComponent(workspaceId)}/exams/${encodeURIComponent(examId)}/export`;
+  async exportExamPdf(
+    workspaceId: string,
+    examId: string,
+    mode: "questions" | "solutions" = "questions",
+  ): Promise<Blob> {
+    const url = `${getBaseUrl()}/api/workspaces/${encodeURIComponent(workspaceId)}/exams/${encodeURIComponent(examId)}/export?mode=${encodeURIComponent(mode)}`;
     const token = await getAccessToken();
     const resp = await fetch(url, {
       headers: { authorization: `Bearer ${token}` },

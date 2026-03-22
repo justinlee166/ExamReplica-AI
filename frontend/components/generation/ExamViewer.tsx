@@ -42,6 +42,7 @@ type Phase = "taking" | "grading" | "results";
 
 export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
   const [downloading, setDownloading] = useState(false);
+  const [downloadingSolutions, setDownloadingSolutions] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
   // Answer state: questionId -> student answer
@@ -66,7 +67,7 @@ export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
     setDownloading(true);
     setDownloadError(null);
     try {
-      const blob = await apiClient.exportExamPdf(workspaceId, exam.id);
+      const blob = await apiClient.exportExamPdf(workspaceId, exam.id, "questions");
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
@@ -81,6 +82,28 @@ export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
       );
     } finally {
       setDownloading(false);
+    }
+  }
+
+  async function handleDownloadSolutionsPdf() {
+    setDownloadingSolutions(true);
+    setDownloadError(null);
+    try {
+      const blob = await apiClient.exportExamPdf(workspaceId, exam.id, "solutions");
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${exam.title.replace(/[^a-zA-Z0-9_-]/g, "_")}_solutions.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setDownloadError(
+        err instanceof Error ? err.message : "Solutions PDF download failed.",
+      );
+    } finally {
+      setDownloadingSolutions(false);
     }
   }
 
@@ -194,7 +217,25 @@ export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
             ) : (
               <>
                 <Download className="mr-2 h-4 w-4" />
-                Download PDF
+                Download Questions (PDF)
+              </>
+            )}
+          </Button>
+          <Button
+            id="exam-download-solutions-button"
+            variant="outline"
+            disabled={downloadingSolutions}
+            onClick={() => void handleDownloadSolutionsPdf()}
+          >
+            {downloadingSolutions ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Downloading...
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Download Solutions (PDF)
               </>
             )}
           </Button>

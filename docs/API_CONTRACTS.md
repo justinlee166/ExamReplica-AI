@@ -244,7 +244,10 @@ upload_label: "Midterm 1"  (optional)
 
 **Purpose:** Download generated exam as PDF
 
-**Response:** `200` — PDF file
+**Query parameters:**
+- `mode` (optional, default `"questions"`): `"questions"` — questions and MCQ choices only, no answers; `"solutions"` — questions followed by the correct answer and full worked solution.
+
+**Response:** `200` — PDF file (`Content-Disposition: attachment; filename="exam.pdf"` for questions mode; `"exam_solutions.pdf"` for solutions mode)
 
 ---
 
