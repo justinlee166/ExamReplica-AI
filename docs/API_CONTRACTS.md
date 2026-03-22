@@ -334,6 +334,8 @@ upload_label: "Midterm 1"  (optional)
 
 ## Regeneration
 
+> **Implementation:** `backend/routes/regeneration.py`. Background job dispatched via `BackgroundTasks`. Reuses `GenerationService.run_pipeline()` with `exam_mode="targeted_practice"`.
+
 ### `POST /api/workspaces/{workspace_id}/regeneration-requests`
 
 **Purpose:** Request targeted practice regeneration based on weakness signals
@@ -347,10 +349,45 @@ upload_label: "Midterm 1"  (optional)
 }
 ```
 
-**Response:** `202` — regeneration request accepted, linked to latest analytics snapshot
+**Constraints:**
+- `target_concepts`: 1–10 strings
+- `question_count`: 3–20 (default 5)
+- `format_type`: `"mcq"` | `"frq"` | `"mixed"` (default `"mixed"`)
+
+**Response:** `202`
+```json
+{
+  "id": "...",
+  "workspace_id": "...",
+  "status": "queued",
+  "target_concepts": ["hypothesis_testing", "p_value_interpretation"],
+  "generated_exam_id": null,
+  "created_at": "..."
+}
+```
+
+**Notes:**
+- Ensures an `analytics_snapshots` row exists for the workspace (creates one if absent).
+- The `regeneration_requests` row is linked to that snapshot via `source_analytics_snapshot_id`.
+- Generation runs as a background job: `queued` → `running` → `completed` | `failed`.
+- On completion, `generated_exam_id` is populated and the exam is accessible via `GET /exams/{id}`.
 
 ### `GET /api/workspaces/{workspace_id}/regeneration-requests/{request_id}`
 
 **Purpose:** Check regeneration request status
 
-**Response:** `200` — request object with `status` and optional `generated_exam_id` when complete
+**Response:** `200`
+```json
+{
+  "id": "...",
+  "workspace_id": "...",
+  "status": "completed",
+  "target_concepts": ["hypothesis_testing"],
+  "generated_exam_id": "...",
+  "created_at": "..."
+}
+```
+
+**Notes:**
+- `generated_exam_id` is `null` while `status` is `queued` or `running`.
+- When `status` is `completed`, fetch the exam via `GET /api/workspaces/{workspace_id}/exams/{generated_exam_id}`.

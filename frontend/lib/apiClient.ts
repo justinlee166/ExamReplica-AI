@@ -260,6 +260,51 @@ export type SubmissionRead = {
   answers: SubmissionAnswer[];
 };
 
+// --- Analytics types ---
+
+export type MasteryLevel = "not_started" | "developing" | "proficient" | "strong";
+
+export type ConceptMasteryRead = {
+  score: number;
+  level: MasteryLevel;
+};
+
+export type PerformanceTrendRead = {
+  session: number;
+  score: number;
+};
+
+export type RecommendationRead = {
+  concept: string;
+  reason: string;
+};
+
+export type AnalyticsResponse = {
+  concept_mastery: Record<string, ConceptMasteryRead>;
+  error_distribution: Record<string, number>;
+  performance_trend: PerformanceTrendRead[];
+  recommendations: RecommendationRead[];
+};
+
+// --- Regeneration types ---
+
+export type RegenerationStatus = "queued" | "running" | "completed" | "failed";
+
+export type RegenerationRequestCreate = {
+  target_concepts: string[];
+  question_count?: number;
+  format_type?: "mcq" | "frq" | "mixed";
+};
+
+export type RegenerationRequestResponse = {
+  id: string;
+  workspace_id: string;
+  status: RegenerationStatus;
+  target_concepts: string[];
+  generated_exam_id: string | null;
+  created_at: string;
+};
+
 export class ApiError extends Error {
   status: number;
   detail?: unknown;
@@ -460,6 +505,35 @@ export const apiClient = {
   ): Promise<SubmissionRead> {
     return request<SubmissionRead>(
       `/api/workspaces/${encodeURIComponent(workspaceId)}/submissions/${encodeURIComponent(submissionId)}`,
+    );
+  },
+
+  getAnalytics(workspaceId: string): Promise<AnalyticsResponse> {
+    return request<AnalyticsResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/analytics`,
+    );
+  },
+
+  postRegenerationRequest(
+    workspaceId: string,
+    body: RegenerationRequestCreate,
+  ): Promise<RegenerationRequestResponse> {
+    return request<RegenerationRequestResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/regeneration-requests`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+  },
+
+  getRegenerationRequest(
+    workspaceId: string,
+    requestId: string,
+  ): Promise<RegenerationRequestResponse> {
+    return request<RegenerationRequestResponse>(
+      `/api/workspaces/${encodeURIComponent(workspaceId)}/regeneration-requests/${encodeURIComponent(requestId)}`,
     );
   },
 
