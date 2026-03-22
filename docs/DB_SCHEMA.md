@@ -277,6 +277,8 @@ Normalized error-type labels.
 
 ## Analytics and Regeneration Entities
 
+> **Migration:** `migrations/012_analytics_regeneration_tables.sql` — creates `analytics_snapshots` and `regeneration_requests` with CHECK constraints and RLS policies scoped to workspace owner.
+
 ### `analytics_snapshots`
 
 Periodic mastery and error-state summaries.
@@ -303,7 +305,9 @@ Targeted follow-up generation triggered by analytics.
 | `source_analytics_snapshot_id` | UUID (FK → analytics_snapshots) | |
 | `target_concepts` | JSONB | Concept targets |
 | `request_status` | VARCHAR | queued, running, completed, failed |
+| `generated_exam_id` | UUID (FK → generated_exams, nullable) | Populated once targeted practice exam is generated |
 | `created_at` | TIMESTAMP | |
+| `updated_at` | TIMESTAMP | |
 
 ---
 

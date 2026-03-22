@@ -299,6 +299,64 @@
 
 ---
 
+---
+
+## Phase 6: Analytics and Regeneration
+
+### T-601: Database schema for analytics and regeneration entities
+- **Phase:** 6
+- **Status:** Complete
+- **Goal:** Create migration for analytics_snapshots and regeneration_requests tables
+- **Acceptance Criteria:**
+  - `migrations/012_analytics_regeneration_tables.sql` creates both tables with FK references, CHECK constraints, and RLS policies scoped to workspace owner
+  - `analytics_snapshots` has workspace_id, user_id, concept_mastery_state JSONB, error_distribution JSONB, performance_trend_summary JSONB
+  - `regeneration_requests` has workspace_id, user_id, source_analytics_snapshot_id, target_concepts JSONB NOT NULL, request_status CHECK, generated_exam_id (nullable FK → generated_exams), updated_at with trigger
+  - Indexes on all FK columns
+
+### T-603: Regeneration Service + POST/GET Regeneration Request Endpoints
+- **Phase:** 6
+- **Status:** Complete
+- **Goal:** Accept targeted practice requests, build a scoped generation config biased toward weak concepts, dispatch the existing GenerationService pipeline, and link the result to a regeneration_requests row
+- **Acceptance Criteria:**
+  - `backend/models/regeneration.py` — RegenerationRequestCreate (target_concepts, question_count 3–20, format_type), RegenerationRequestResponse
+  - `backend/services/regeneration/service.py` — RegenerationService.build_scoped_config() builds GenerationConfig + ScopeConstraints with target_concepts as topics and a focused custom_prompt; run_regeneration_pipeline() runs the existing generation pipeline as a background job, creates generation_requests + generated_exams rows, updates regeneration_requests.generated_exam_id and request_status
+  - `POST /api/workspaces/{workspace_id}/regeneration-requests` — validates workspace ownership, ensures an analytics snapshot exists (creates one if needed), creates regeneration_requests row, dispatches background job, returns 202
+  - `GET /api/workspaces/{workspace_id}/regeneration-requests/{request_id}` — returns current status and generated_exam_id (null until completed)
+  - Both routers registered in backend/main.py
+  - Reuses GenerationService.run_pipeline() entirely — no duplicate generation implementation
+  - generated_exams.generation_request_id FK satisfied by creating a generation_requests row with request_type='targeted_regeneration'
+
+### T-602: Analytics Service and GET /analytics API Endpoint
+- **Phase:** 6
+- **Status:** Complete
+- **Goal:** Aggregate grading results into concept mastery, error distribution, and performance trend; expose via GET /analytics
+- **Acceptance Criteria:**
+  - `backend/services/analytics/models.py` — internal Pydantic models: ConceptMasteryEntry, PerformanceTrendEntry, Recommendation, AnalyticsResult
+  - `backend/services/analytics/service.py` — AnalyticsStore Protocol, AnalyticsService.compute_analytics(), SupabaseAnalyticsStore, build_analytics_service()
+  - `backend/services/analytics/snapshot.py` — persist_analytics_snapshot() writes one analytics_snapshots row
+  - `backend/models/analytics.py` — API response models: AnalyticsResponse, ConceptMasteryRead, PerformanceTrendRead, RecommendationRead
+  - `backend/routes/analytics.py` — GET /workspaces/{workspace_id}/analytics; validates workspace ownership; returns empty object (not 404) when no graded submissions exist; persists snapshot fire-and-forget
+  - Router registered in backend/main.py
+  - Mastery levels: not_started (0 questions), developing (<0.4), proficient (<0.7), strong (>=0.7)
+  - Recommendations: concepts with mastery < 0.5 and error types with >= 3 occurrences; up to 5 returned
+  - `backend/tests/test_analytics_service.py` — 9 tests covering empty workspace, mastery averaging, level thresholds, error aggregation, recommendation triggers, trend ordering
+
+### T-604: Frontend Analytics Dashboard (Live Data + Recharts)
+- **Phase:** 6
+- **Status:** Complete
+- **Goal:** Replace mock analytics page with live API data, Recharts visualizations, and targeted practice flow
+- **Acceptance Criteria:**
+  - Workspace selector `<Select>` at top of page fetches user's workspaces and re-fetches analytics on change
+  - `getAnalytics`, `postRegenerationRequest`, `getRegenerationRequest` added to `apiClient.ts` with matching TypeScript types
+  - Loading spinner while fetching analytics; empty state when no graded submissions exist; error display on failure
+  - Progress tab: `LineChart` (score over time by session) + `PieChart` (error distribution)
+  - Concepts tab: horizontal `BarChart` with concepts on Y-axis, color-coded by mastery level (strong/proficient/developing/not_started), with legend
+  - Recommendations tab: one card per recommendation with concept label, reason, and "Start Targeted Practice" button
+  - "Start Targeted Practice" POSTs regeneration request, polls every 3 seconds, redirects to `/dashboard/workspaces/{id}/exams/{examId}` on completion
+  - Per-card loading spinner + "Generating…" label while polling; error state with retry on failure
+  - All Recharts components inside `ResponsiveContainer`; recharts imported from existing `package.json` dependency
+  - TypeScript strict mode; all types match backend API response shape
+
 ## Future Phases
 
-Tasks for Phases 6–7 will be added as earlier phases are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
+Tasks for Phase 7 will be added as earlier phases are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
