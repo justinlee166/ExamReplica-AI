@@ -57,36 +57,39 @@ export const mockGradedSubmission: SubmissionRead = {
   workspace_id: "ws-1",
   generated_exam_id: "exam-1",
   status: "graded",
-  total_score: 1.5,
-  max_score: 3,
+  overall_score: 1.5,
+  total_possible: 3,
+  submitted_at: null,
   created_at: "2026-03-15T10:30:00Z",
   answers: [
     {
       id: "ans-1",
-      generated_question_id: "q-1",
-      student_answer: "A",
+      question_id: "q-1",
+      answer_content: "A",
       grading_result: {
         id: "gr-1",
-        generated_question_id: "q-1",
-        score: 1,
-        max_score: 1,
-        is_correct: true,
-        feedback: "Correct!",
+        question_id: "q-1",
+        correctness_label: "correct",
+        score_value: 1,
+        points_possible: 1,
+        diagnostic_explanation: "Correct!",
+        concept_label: "maximum_likelihood",
         error_classifications: [],
       },
     },
     {
       id: "ans-2",
-      generated_question_id: "q-2",
-      student_answer: "X̄ ± z * S/√n",
+      question_id: "q-2",
+      answer_content: "X̄ ± z * S/√n",
       grading_result: {
         id: "gr-2",
-        generated_question_id: "q-2",
-        score: 0.5,
-        max_score: 1,
-        is_correct: false,
-        feedback:
+        question_id: "q-2",
+        correctness_label: "partial",
+        score_value: 0.5,
+        points_possible: 1,
+        diagnostic_explanation:
           "Partial credit: correct formula structure but used z instead of t-distribution. Since σ² is unknown, the t-distribution is required.",
+        concept_label: "confidence_intervals",
         error_classifications: [
           {
             id: "ec-1",
@@ -99,19 +102,20 @@ export const mockGradedSubmission: SubmissionRead = {
     },
     {
       id: "ans-3",
-      generated_question_id: "q-3",
-      student_answer: "C",
+      question_id: "q-3",
+      answer_content: "C",
       grading_result: {
         id: "gr-3",
-        generated_question_id: "q-3",
-        score: 0,
-        max_score: 1,
-        is_correct: false,
-        feedback: "Expected: B",
+        question_id: "q-3",
+        correctness_label: "incorrect",
+        score_value: 0,
+        points_possible: 1,
+        diagnostic_explanation: "Expected: B. ΣXᵢ is the sufficient statistic by the factorization theorem.",
+        concept_label: "sufficient_statistics",
         error_classifications: [
           {
             id: "ec-2",
-            error_type: "incorrect_answer",
+            error_type: "wrong_method",
             description: "Student answered 'C' but expected 'B'",
             severity: "moderate",
           },
@@ -202,10 +206,10 @@ describe("GradingResultsViewer", () => {
     );
 
     expect(screen.getByText("Formula Misuse")).toBeInTheDocument();
-    expect(screen.getByText("Incorrect Answer")).toBeInTheDocument();
+    expect(screen.getByText("Wrong Method")).toBeInTheDocument();
   });
 
-  it("renders feedback text for each graded answer", () => {
+  it("renders diagnostic explanation text for each graded answer", () => {
     render(
       <GradingResultsViewer
         submission={mockGradedSubmission}
@@ -238,20 +242,22 @@ describe("GradingResultsViewer", () => {
       workspace_id: "ws-1",
       generated_exam_id: "exam-1",
       status: "graded",
-      total_score: 3,
-      max_score: 3,
+      overall_score: 3,
+      total_possible: 3,
+      submitted_at: null,
       created_at: "2026-03-15T10:30:00Z",
       answers: mockQuestions.map((q, i) => ({
         id: `ans-perfect-${i}`,
-        generated_question_id: q.id,
-        student_answer: q.answer_key ?? "",
+        question_id: q.id,
+        answer_content: q.answer_key ?? "",
         grading_result: {
           id: `gr-perfect-${i}`,
-          generated_question_id: q.id,
-          score: 1,
-          max_score: 1,
-          is_correct: true,
-          feedback: "Correct!",
+          question_id: q.id,
+          correctness_label: "correct" as const,
+          score_value: 1,
+          points_possible: 1,
+          diagnostic_explanation: "Correct!",
+          concept_label: q.topic_label,
           error_classifications: [],
         },
       })),

@@ -242,6 +242,63 @@
 
 ---
 
+## Phase 5: Submission and Grading
+
+### T-501: Database schema for submission and grading entities
+- **Phase:** 5
+- **Status:** Complete
+- **Goal:** Create migration for submissions, submission_answers, grading_results, and error_classifications tables
+- **Acceptance Criteria:**
+  - `migrations/009_submission_grading_tables.sql` creates all four tables with correct columns, FK references, CHECK constraints, and RLS policies
+  - `submissions` has status CHECK (submitted, grading, graded, failed), workspace_id, user_id, overall_score, total_possible
+  - `submission_answers` uses `answer_content` (not `student_answer`) and `generated_question_id`
+  - `grading_results` uses `correctness_label` (not `is_correct`), `score_value`, `diagnostic_explanation`, `concept_label`, `points_possible`
+  - `error_classifications` has CHECK constraint on `error_type` (5 allowed values) and optional `severity` (minor, moderate, major)
+  - RLS policies scope through workspace ownership chain
+  - Indexes exist on all FK columns
+
+### T-502: Pydantic models for submission and grading
+- **Phase:** 5
+- **Status:** Complete
+- **Goal:** Define type-safe request/response models for submission and grading flows
+- **Acceptance Criteria:**
+  - `backend/models/submission.py` defines API-facing models: SubmissionCreate, SubmissionCreatedResponse, SubmissionRead, SubmissionAnswerRead, GradingResultRead, ErrorClassificationRead
+  - `backend/models/grading.py` defines internal models: GradingResultCreate, ErrorClassificationCreate with Literal-constrained CorrectnessLabel and ErrorType
+  - All field names match DB column names (score_value, diagnostic_explanation, concept_label, answer_content)
+  - CorrectnessLabel is Literal['correct', 'partial', 'incorrect'] — never a boolean
+  - ErrorType is Literal with exactly 5 allowed values
+  - All models use Python type hints, no Any
+
+### T-503: Grading service and AI pipeline
+- **Phase:** 5
+- **Status:** Complete
+- **Goal:** Implement grading service that evaluates answers and returns structured results
+- **Acceptance Criteria:**
+  - `backend/services/grading/service.py` returns `GradingPipelineResult` — does NOT write to DB directly
+  - `backend/services/grading/grader.py` implements LLM-based grading with Gemini
+  - LLM prompt requires correctness_label (correct/partial/incorrect), score_value, diagnostic_explanation, concept_label, and error_classifications
+  - Score values are clamped to [0, points_possible]
+  - Invalid JSON or schema validation failures raise `GradingError` (subclass of AppError)
+  - Error types are restricted to the 5 canonical values
+  - pytest tests mock LLM calls and verify all grading paths including formula_misuse
+
+### T-504: Submission API routes and frontend UI
+- **Phase:** 5
+- **Status:** Complete
+- **Goal:** Create submission/grading endpoints and frontend submission + results UI
+- **Acceptance Criteria:**
+  - `POST /api/workspaces/{workspace_id}/exams/{exam_id}/submissions` creates submission + answers, dispatches background grading, returns 201
+  - `GET /api/workspaces/{workspace_id}/submissions/{submission_id}` returns nested response with correctness_label, score_value, diagnostic_explanation, concept_label, error_classifications
+  - Background job sets status = grading → graded (or failed), persists grading_results and error_classifications to DB
+  - Both endpoints validate workspace ownership
+  - Router registered in main.py under /api prefix
+  - Frontend ExamViewer manages answer state and transitions: taking → grading → results
+  - GradingStatusPoller polls every 3 seconds, stops on graded/failed
+  - GradingResultsViewer shows overall score, per-question cards with colored correctness badges, student answer vs correct answer, diagnostic_explanation, error classification badges
+  - All TypeScript types match backend API response shape
+
+---
+
 ## Future Phases
 
-Tasks for Phases 5–7 will be added as earlier phases are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
+Tasks for Phases 6–7 will be added as earlier phases are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.

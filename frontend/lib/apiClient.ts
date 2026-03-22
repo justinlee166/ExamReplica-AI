@@ -204,11 +204,13 @@ export type GeneratedExamDetail = {
 
 export type SubmissionStatus = "submitted" | "grading" | "graded" | "failed";
 
+export type CorrectnessLabel = "correct" | "partial" | "incorrect";
+
 export type ErrorSeverity = "minor" | "moderate" | "major";
 
 export type AnswerItem = {
-  generated_question_id: string;
-  student_answer: string;
+  question_id: string;
+  answer_content: string;
 };
 
 export type SubmissionCreatePayload = {
@@ -225,23 +227,24 @@ export type ErrorClassification = {
   id: string;
   error_type: string;
   description: string | null;
-  severity: ErrorSeverity;
+  severity: ErrorSeverity | null;
 };
 
 export type GradingResult = {
   id: string;
-  generated_question_id: string;
-  score: number;
-  max_score: number;
-  is_correct: boolean;
-  feedback: string | null;
+  question_id: string;
+  correctness_label: CorrectnessLabel;
+  score_value: number;
+  points_possible: number;
+  diagnostic_explanation: string | null;
+  concept_label: string | null;
   error_classifications: ErrorClassification[];
 };
 
 export type SubmissionAnswer = {
   id: string;
-  generated_question_id: string;
-  student_answer: string;
+  question_id: string;
+  answer_content: string;
   grading_result: GradingResult | null;
 };
 
@@ -250,8 +253,9 @@ export type SubmissionRead = {
   workspace_id: string;
   generated_exam_id: string;
   status: SubmissionStatus;
-  total_score: number | null;
-  max_score: number | null;
+  overall_score: number | null;
+  total_possible: number | null;
+  submitted_at: string | null;
   created_at: string;
   answers: SubmissionAnswer[];
 };

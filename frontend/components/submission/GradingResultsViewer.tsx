@@ -14,6 +14,7 @@ import type {
   SubmissionRead,
   SubmissionAnswer,
   ExamQuestion,
+  CorrectnessLabel,
 } from "@/lib/apiClient";
 
 type GradingResultsViewerProps = {
@@ -25,14 +26,12 @@ const OPTION_LABELS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
 function getCorrectnessLabel(
   result: SubmissionAnswer["grading_result"],
-): "correct" | "partial" | "incorrect" {
+): CorrectnessLabel {
   if (!result) return "incorrect";
-  if (result.is_correct) return "correct";
-  if (result.score > 0 && result.score < result.max_score) return "partial";
-  return "incorrect";
+  return result.correctness_label;
 }
 
-function correctnessStyles(label: "correct" | "partial" | "incorrect") {
+function correctnessStyles(label: CorrectnessLabel) {
   switch (label) {
     case "correct":
       return {
@@ -67,7 +66,7 @@ function correctnessStyles(label: "correct" | "partial" | "incorrect") {
   }
 }
 
-function severityBadgeClasses(severity: string) {
+function severityBadgeClasses(severity: string | null) {
   switch (severity) {
     case "major":
       return "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300";
@@ -115,11 +114,11 @@ export function GradingResultsViewer({
   questions,
 }: GradingResultsViewerProps) {
   const questionMap = new Map(questions.map((q) => [q.id, q]));
-  const totalScore = submission.total_score ?? 0;
-  const maxScore = submission.max_score ?? 1;
+  const totalScore = submission.overall_score ?? 0;
+  const maxScore = submission.total_possible ?? 1;
   const percentage = Math.round((totalScore / maxScore) * 100);
   const correctCount = submission.answers.filter(
-    (a) => a.grading_result?.is_correct,
+    (a) => a.grading_result?.correctness_label === "correct",
   ).length;
   const incorrectCount = submission.answers.length - correctCount;
 
@@ -210,7 +209,7 @@ export function GradingResultsViewer({
           Question Review
         </h3>
         {submission.answers.map((answer) => {
-          const question = questionMap.get(answer.generated_question_id);
+          const question = questionMap.get(answer.question_id);
           const gr = answer.grading_result;
           const label = getCorrectnessLabel(gr);
           const styles = correctnessStyles(label);
@@ -277,7 +276,7 @@ export function GradingResultsViewer({
                   {gr && (
                     <div className="text-right shrink-0">
                       <span className="font-medium text-foreground">
-                        {gr.score}/{gr.max_score}
+                        {gr.score_value}/{gr.points_possible}
                       </span>
                       <p className="text-xs text-muted-foreground">
                         points
@@ -293,7 +292,7 @@ export function GradingResultsViewer({
                       Your Answer
                     </p>
                     <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">
-                      {formatStudentAnswer(answer.student_answer, question)}
+                      {formatStudentAnswer(answer.answer_content, question)}
                     </p>
                   </div>
                   {question?.answer_key && (
@@ -308,14 +307,14 @@ export function GradingResultsViewer({
                   )}
                 </div>
 
-                {/* Diagnostic explanation (feedback) */}
-                {gr?.feedback && (
+                {/* Diagnostic explanation */}
+                {gr?.diagnostic_explanation && (
                   <div className="rounded-xl border border-border bg-secondary/30 p-3">
                     <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                       Feedback
                     </p>
                     <p className="mt-1 text-sm text-foreground whitespace-pre-wrap">
-                      {gr.feedback}
+                      {gr.diagnostic_explanation}
                     </p>
                   </div>
                 )}

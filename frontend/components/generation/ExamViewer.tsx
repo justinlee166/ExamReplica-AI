@@ -91,8 +91,8 @@ export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
     const answerItems: AnswerItem[] = exam.questions
       .filter((q) => answers[q.id]?.trim())
       .map((q) => ({
-        generated_question_id: q.id,
-        student_answer: answers[q.id].trim(),
+        question_id: q.id,
+        answer_content: answers[q.id].trim(),
       }));
 
     if (answerItems.length === 0) {
