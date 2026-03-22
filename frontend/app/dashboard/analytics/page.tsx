@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useTheme } from "next-themes"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -58,7 +59,22 @@ const MASTERY_LABEL: Record<MasteryLevel, string> = {
   strong: "Strong",
 }
 
-const ERROR_COLORS = ["#ef4444", "#f59e0b", "#3b82f6", "#a855f7", "#ec4899"]
+// Vivid colors chosen to read well on both dark and light backgrounds
+const ERROR_COLORS_DARK = ["#f87171", "#fbbf24", "#60a5fa", "#c084fc", "#f472b6"]
+const ERROR_COLORS_LIGHT = ["#dc2626", "#d97706", "#2563eb", "#9333ea", "#db2777"]
+
+function useChartTokens(resolvedTheme: string | undefined) {
+  const isDark = resolvedTheme !== "light"
+  return {
+    isDark,
+    textColor: isDark ? "#cbd5e1" : "#334155",
+    gridColor: isDark ? "#1e293b" : "#e2e8f0",
+    tooltipBg: isDark ? "#1e293b" : "#ffffff",
+    tooltipBorder: isDark ? "#334155" : "#e2e8f0",
+    tooltipText: isDark ? "#f1f5f9" : "#0f172a",
+    errorColors: isDark ? ERROR_COLORS_DARK : ERROR_COLORS_LIGHT,
+  }
+}
 
 function formatConceptLabel(key: string): string {
   return key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
@@ -80,7 +96,13 @@ function EmptyState() {
   )
 }
 
-function ConceptMasteryChart({ data }: { data: AnalyticsResponse["concept_mastery"] }) {
+function ConceptMasteryChart({
+  data,
+  tokens,
+}: {
+  data: AnalyticsResponse["concept_mastery"]
+  tokens: ReturnType<typeof useChartTokens>
+}) {
   const chartData = Object.entries(data).map(([key, val]) => ({
     concept: formatConceptLabel(key),
     score: Math.round(val.score * 100),
@@ -92,9 +114,28 @@ function ConceptMasteryChart({ data }: { data: AnalyticsResponse["concept_master
   return (
     <ResponsiveContainer width="100%" height={Math.max(240, chartData.length * 48)}>
       <BarChart data={chartData} layout="vertical" margin={{ left: 16, right: 24, top: 8, bottom: 8 }}>
-        <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 12 }} />
-        <YAxis type="category" dataKey="concept" width={160} tick={{ fontSize: 12 }} />
-        <Tooltip formatter={(value) => [`${value}%`, "Score"]} />
+        <XAxis
+          type="number"
+          domain={[0, 100]}
+          tickFormatter={(v) => `${v}%`}
+          tick={{ fontSize: 12, fill: tokens.textColor }}
+        />
+        <YAxis
+          type="category"
+          dataKey="concept"
+          width={160}
+          tick={{ fontSize: 12, fill: tokens.textColor }}
+        />
+        <Tooltip
+          formatter={(value) => [`${value}%`, "Score"]}
+          contentStyle={{
+            backgroundColor: tokens.tooltipBg,
+            borderColor: tokens.tooltipBorder,
+            color: tokens.tooltipText,
+            borderRadius: "8px",
+          }}
+          labelStyle={{ color: tokens.tooltipText }}
+        />
         <Bar dataKey="score" radius={4}>
           {chartData.map((entry, i) => (
             <Cell key={i} fill={MASTERY_COLOR[entry.level]} />
@@ -105,7 +146,13 @@ function ConceptMasteryChart({ data }: { data: AnalyticsResponse["concept_master
   )
 }
 
-function ErrorDistributionChart({ data }: { data: AnalyticsResponse["error_distribution"] }) {
+function ErrorDistributionChart({
+  data,
+  tokens,
+}: {
+  data: AnalyticsResponse["error_distribution"]
+  tokens: ReturnType<typeof useChartTokens>
+}) {
   const chartData = Object.entries(data)
     .filter(([, count]) => count > 0)
     .map(([key, value]) => ({ name: formatConceptLabel(key), value }))
@@ -119,7 +166,7 @@ function ErrorDistributionChart({ data }: { data: AnalyticsResponse["error_distr
   }
 
   return (
-    <ResponsiveContainer width="100%" height={260}>
+    <ResponsiveContainer width="100%" height={280}>
       <PieChart>
         <Pie
           data={chartData}
@@ -129,20 +176,38 @@ function ErrorDistributionChart({ data }: { data: AnalyticsResponse["error_distr
           cy="50%"
           outerRadius={90}
           label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}
-          labelLine={false}
+          labelLine={{ stroke: tokens.textColor }}
+          labelStyle={{ fill: tokens.textColor, fontSize: 12 }}
         >
           {chartData.map((_, i) => (
-            <Cell key={i} fill={ERROR_COLORS[i % ERROR_COLORS.length]} />
+            <Cell key={i} fill={tokens.errorColors[i % tokens.errorColors.length]} />
           ))}
         </Pie>
-        <Tooltip formatter={(value) => [value, "Occurrences"]} />
-        <Legend />
+        <Tooltip
+          formatter={(value) => [value, "Occurrences"]}
+          contentStyle={{
+            backgroundColor: tokens.tooltipBg,
+            borderColor: tokens.tooltipBorder,
+            color: tokens.tooltipText,
+            borderRadius: "8px",
+          }}
+          labelStyle={{ color: tokens.tooltipText }}
+        />
+        <Legend
+          wrapperStyle={{ color: tokens.textColor, fontSize: 13 }}
+        />
       </PieChart>
     </ResponsiveContainer>
   )
 }
 
-function PerformanceTrendChart({ data }: { data: AnalyticsResponse["performance_trend"] }) {
+function PerformanceTrendChart({
+  data,
+  tokens,
+}: {
+  data: AnalyticsResponse["performance_trend"]
+  tokens: ReturnType<typeof useChartTokens>
+}) {
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
@@ -156,14 +221,37 @@ function PerformanceTrendChart({ data }: { data: AnalyticsResponse["performance_
     score: Math.round(entry.score * 100),
   }))
 
+  // Primary color: vivid blue-indigo
+  const primaryStroke = tokens.isDark ? "#818cf8" : "#4f46e5"
+
   return (
     <ResponsiveContainer width="100%" height={240}>
       <LineChart data={chartData} margin={{ left: 8, right: 16, top: 8, bottom: 8 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-        <XAxis dataKey="session" tick={{ fontSize: 12 }} />
-        <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} tick={{ fontSize: 12 }} />
-        <Tooltip formatter={(value) => [`${value}%`, "Score"]} />
-        <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
+        <CartesianGrid strokeDasharray="3 3" stroke={tokens.gridColor} />
+        <XAxis dataKey="session" tick={{ fontSize: 12, fill: tokens.textColor }} />
+        <YAxis
+          domain={[0, 100]}
+          tickFormatter={(v) => `${v}%`}
+          tick={{ fontSize: 12, fill: tokens.textColor }}
+        />
+        <Tooltip
+          formatter={(value) => [`${value}%`, "Score"]}
+          contentStyle={{
+            backgroundColor: tokens.tooltipBg,
+            borderColor: tokens.tooltipBorder,
+            color: tokens.tooltipText,
+            borderRadius: "8px",
+          }}
+          labelStyle={{ color: tokens.tooltipText }}
+        />
+        <Line
+          type="monotone"
+          dataKey="score"
+          stroke={primaryStroke}
+          strokeWidth={2}
+          dot={{ r: 4, fill: primaryStroke, strokeWidth: 0 }}
+          activeDot={{ r: 6, fill: primaryStroke }}
+        />
       </LineChart>
     </ResponsiveContainer>
   )
@@ -225,6 +313,8 @@ function RecommendationCard({
 
 export default function AnalyticsPage() {
   const router = useRouter()
+  const { resolvedTheme } = useTheme()
+  const tokens = useChartTokens(resolvedTheme)
 
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [workspaceLoading, setWorkspaceLoading] = useState(true)
@@ -467,7 +557,7 @@ export default function AnalyticsPage() {
                   <CardDescription>Your exam score by submission session</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <PerformanceTrendChart data={analytics.performance_trend} />
+                  <PerformanceTrendChart data={analytics.performance_trend} tokens={tokens} />
                 </CardContent>
               </Card>
 
@@ -480,7 +570,7 @@ export default function AnalyticsPage() {
                   <CardDescription>Breakdown of error types across all submissions</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ErrorDistributionChart data={analytics.error_distribution} />
+                  <ErrorDistributionChart data={analytics.error_distribution} tokens={tokens} />
                 </CardContent>
               </Card>
             </div>
@@ -507,7 +597,7 @@ export default function AnalyticsPage() {
                     </div>
                   ))}
                 </div>
-                <ConceptMasteryChart data={analytics.concept_mastery} />
+                <ConceptMasteryChart data={analytics.concept_mastery} tokens={tokens} />
               </CardContent>
             </Card>
           </TabsContent>

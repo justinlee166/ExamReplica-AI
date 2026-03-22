@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useTheme } from "next-themes"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   User,
   Bell,
@@ -19,7 +21,6 @@ import {
   CreditCard,
   Download,
   Trash2,
-  Mail,
   Key,
   Smartphone,
   Globe,
@@ -28,19 +29,121 @@ import {
   Monitor,
   Zap,
   CheckCircle2,
-  AlertTriangle,
-  Camera
+  Camera,
+  Loader2,
 } from "lucide-react"
+import { useAuthUser } from "@/lib/use-auth-user"
+import { getSupabaseClient } from "@/lib/supabaseClient"
+import { toast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
+  const { user, loading, displayName, email, initials, avatarUrl } = useAuthUser()
+  const { theme, setTheme } = useTheme()
+
+  // Profile form state
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [userEmail, setUserEmail] = useState("")
+  const [university, setUniversity] = useState("")
+  const [major, setMajor] = useState("")
+  const [savingProfile, setSavingProfile] = useState(false)
+
+  // Password state
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [savingPassword, setSavingPassword] = useState(false)
+
+  // Notification & preference state
   const [emailNotifications, setEmailNotifications] = useState(true)
-  const [pushNotifications, setPushNotifications] = useState(true)
   const [weeklyDigest, setWeeklyDigest] = useState(true)
   const [studyReminders, setStudyReminders] = useState(true)
-  const [theme, setTheme] = useState("dark")
+  const [pushNotifications, setPushNotifications] = useState(true)
   const [language, setLanguage] = useState("en")
   const [autoGrade, setAutoGrade] = useState(true)
   const [showHints, setShowHints] = useState(true)
+
+  // Populate form fields from real user data once loaded
+  useEffect(() => {
+    if (!user) return
+
+    const meta = (user.user_metadata ?? {}) as Record<string, string>
+
+    const first = meta.first_name ?? ""
+    const last = meta.last_name ?? ""
+    const fullName = meta.full_name ?? meta.display_name ?? meta.name ?? ""
+
+    if (first || last) {
+      setFirstName(first)
+      setLastName(last)
+    } else if (fullName) {
+      const parts = fullName.trim().split(/\s+/)
+      setFirstName(parts[0] ?? "")
+      setLastName(parts.slice(1).join(" "))
+    }
+
+    setUserEmail(user.email ?? "")
+    setUniversity(meta.university ?? "")
+    setMajor(meta.major ?? "")
+  }, [user])
+
+  async function handleSaveProfile() {
+    setSavingProfile(true)
+    try {
+      const supabase = getSupabaseClient()
+      const { error } = await supabase.auth.updateUser({
+        email: userEmail !== user?.email ? userEmail : undefined,
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          full_name: `${firstName} ${lastName}`.trim(),
+          university,
+          major,
+        },
+      })
+
+      if (error) throw error
+
+      toast({ title: "Profile updated", description: "Your profile has been saved." })
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Failed to save profile",
+        description: err instanceof Error ? err.message : "An unknown error occurred.",
+      })
+    } finally {
+      setSavingProfile(false)
+    }
+  }
+
+  async function handleUpdatePassword() {
+    if (newPassword !== confirmPassword) {
+      toast({ variant: "destructive", title: "Passwords don't match" })
+      return
+    }
+    if (newPassword.length < 8) {
+      toast({ variant: "destructive", title: "Password must be at least 8 characters" })
+      return
+    }
+    setSavingPassword(true)
+    try {
+      const supabase = getSupabaseClient()
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) throw error
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+      toast({ title: "Password updated", description: "Your password has been changed." })
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Failed to update password",
+        description: err instanceof Error ? err.message : "An unknown error occurred.",
+      })
+    } finally {
+      setSavingPassword(false)
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -86,12 +189,18 @@ export default function SettingsPage() {
             <CardContent className="space-y-6">
               {/* Avatar */}
               <div className="flex items-center gap-6">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src="/placeholder-user.jpg" alt="Profile" />
-                  <AvatarFallback className="text-2xl bg-primary/10 text-primary">JS</AvatarFallback>
-                </Avatar>
+                {loading ? (
+                  <Skeleton className="h-24 w-24 rounded-full" />
+                ) : (
+                  <Avatar className="h-24 w-24">
+                    <AvatarImage src={avatarUrl ?? undefined} alt={displayName ?? "Profile"} />
+                    <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 <div className="space-y-2">
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button variant="outline" size="sm" className="gap-2" disabled>
                     <Camera className="h-4 w-4" />
                     Change Photo
                   </Button>
@@ -102,31 +211,74 @@ export default function SettingsPage() {
               <Separator />
 
               {/* Form Fields */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" defaultValue="Jordan" />
+              {loading ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div key={i} className={`space-y-2 ${i === 4 ? "md:col-span-2" : ""}`}>
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  ))}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" defaultValue="Smith" />
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={userEmail}
+                      onChange={(e) => setUserEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="university">University</Label>
+                    <Input
+                      id="university"
+                      value={university}
+                      onChange={(e) => setUniversity(e.target.value)}
+                      placeholder="e.g. MIT"
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="major">Major</Label>
+                    <Input
+                      id="major"
+                      value={major}
+                      onChange={(e) => setMajor(e.target.value)}
+                      placeholder="e.g. Chemical Engineering"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" defaultValue="jordan.smith@university.edu" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="university">University</Label>
-                  <Input id="university" defaultValue="MIT" />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="major">Major</Label>
-                  <Input id="major" defaultValue="Chemical Engineering" />
-                </div>
-              </div>
+              )}
 
               <div className="flex justify-end">
-                <Button>Save Changes</Button>
+                <Button onClick={handleSaveProfile} disabled={loading || savingProfile}>
+                  {savingProfile ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving…
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -197,19 +349,27 @@ export default function SettingsPage() {
                   {[
                     { value: "light", icon: Sun, label: "Light" },
                     { value: "dark", icon: Moon, label: "Dark" },
-                    { value: "system", icon: Monitor, label: "System" }
+                    { value: "system", icon: Monitor, label: "System" },
                   ].map((option) => (
                     <button
                       key={option.value}
                       onClick={() => setTheme(option.value)}
                       className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
-                        theme === option.value 
-                          ? "border-primary bg-primary/10" 
+                        theme === option.value
+                          ? "border-primary bg-primary/10"
                           : "border-border hover:border-muted-foreground/50"
                       }`}
                     >
-                      <option.icon className={`h-6 w-6 ${theme === option.value ? "text-primary" : "text-muted-foreground"}`} />
-                      <span className={`text-sm font-medium ${theme === option.value ? "text-primary" : ""}`}>
+                      <option.icon
+                        className={`h-6 w-6 ${
+                          theme === option.value ? "text-primary" : "text-muted-foreground"
+                        }`}
+                      />
+                      <span
+                        className={`text-sm font-medium ${
+                          theme === option.value ? "text-primary" : ""
+                        }`}
+                      >
                         {option.label}
                       </span>
                     </button>
@@ -276,18 +436,42 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="currentPassword">Current Password</Label>
-                <Input id="currentPassword" type="password" />
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="newPassword">New Password</Label>
-                <Input id="newPassword" type="password" />
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input id="confirmPassword" type="password" />
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
               </div>
               <div className="flex justify-end">
-                <Button>Update Password</Button>
+                <Button onClick={handleUpdatePassword} disabled={savingPassword}>
+                  {savingPassword ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating…
+                    </>
+                  ) : (
+                    "Update Password"
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -369,7 +553,7 @@ export default function SettingsPage() {
                     "Unlimited exam generation",
                     "AI-powered grading",
                     "Advanced analytics",
-                    "Priority support"
+                    "Priority support",
                   ].map((feature) => (
                     <li key={feature} className="flex items-center gap-2 text-sm">
                       <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -417,7 +601,7 @@ export default function SettingsPage() {
                 {[
                   { date: "Mar 15, 2026", amount: "$19.00", status: "Paid" },
                   { date: "Feb 15, 2026", amount: "$19.00", status: "Paid" },
-                  { date: "Jan 15, 2026", amount: "$19.00", status: "Paid" }
+                  { date: "Jan 15, 2026", amount: "$19.00", status: "Paid" },
                 ].map((invoice, i) => (
                   <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-secondary/20">
                     <div className="flex items-center gap-4">
