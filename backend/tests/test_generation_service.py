@@ -239,22 +239,34 @@ def test_structure_validation_raises_after_two_failures() -> None:
 
 
 def test_novelty_check_triggers_rephrase() -> None:
+    """Novelty check rephrases questions that are too similar to source chunks."""
     chunks = [_make_chunk(rank=1, content="What is the derivative of x^2?")]
-    drafts = [_make_mcq_draft(question_text="What is the derivative of x^2?")]
+    # Provide 3 drafts to satisfy question_count=3; the first is verbatim from the chunk
+    drafts = [
+        _make_mcq_draft(question_text="What is the derivative of x^2?"),
+        _make_mcq_draft(question_text="Evaluate the integral of sin(x)."),
+        _make_mcq_draft(question_text="Apply the chain rule to f(g(x))."),
+    ]
     rephrased_response = "Find the rate of change of x squared."
 
     gemini = FakeGemini([json.dumps(drafts), rephrased_response])
     retrieval = FakeRetrieval(chunks)
-    embedding = FakeEmbedding(similarity=0.95)
+
+    # High similarity only for the verbatim question; others pass novelty check
+    class _SelectiveEmbedding:
+        def compute_similarity(self, *, text_a: str, text_b: str) -> float:
+            if "derivative" in text_a and "derivative" in text_b:
+                return 0.95
+            return 0.2
 
     service = GenerationService(
         retrieval_service=retrieval,
         gemini_caller=gemini,
-        embedding_computer=embedding,
+        embedding_computer=_SelectiveEmbedding(),
     )
 
     result = service.run_pipeline(
-        generation_config=_make_generation_config(question_count=1),
+        generation_config=_make_generation_config(question_count=3),
         scope_constraints=_make_scope(),
         workspace_id=uuid4(),
         professor_profile=_make_profile(),

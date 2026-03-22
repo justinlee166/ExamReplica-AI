@@ -36,6 +36,21 @@ class UpstreamServiceError(AppError):
     detail = "Upstream service error"
 
 
+class ForbiddenError(AppError):
+    status_code = 403
+    detail = "Forbidden"
+
+
+class ConflictError(AppError):
+    status_code = 409
+    detail = "Conflict"
+
+
 class ServiceUnavailableError(AppError):
     status_code = 503
     detail = "Service unavailable"
+
+
+class TooManyRequestsError(AppError):
+    status_code = 429
+    detail = "Too Many Requests"

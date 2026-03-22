@@ -8,6 +8,7 @@ from supabase import Client
 from backend.config.settings import Settings, get_settings
 from backend.config.supabase_client import get_user_client
 from backend.middleware.auth import AuthenticatedUser, get_current_user
+from backend.middleware.rate_limit import check_rate_limit
 from backend.models.professor_profile import ProfessorProfileResponse
 from backend.services.professor_profile.profile_service import (
     ProfessorProfileService,
@@ -28,6 +29,7 @@ async def generate_professor_profile(
     settings: Settings = Depends(get_settings),
     supabase: Client = Depends(get_user_client),
 ) -> ProfessorProfileResponse:
+    check_rate_limit(user_id=user.id, endpoint="profile_generate", max_calls=3)
     return _service(settings, supabase).generate(user_id=user.id, workspace_id=workspace_id)
 
 

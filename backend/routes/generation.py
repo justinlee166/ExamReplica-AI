@@ -11,6 +11,7 @@ from supabase import Client
 from backend.config.settings import Settings, get_settings
 from backend.config.supabase_client import get_admin_client, get_user_client
 from backend.middleware.auth import AuthenticatedUser, get_current_user
+from backend.middleware.rate_limit import check_rate_limit
 from backend.models.errors import NotFoundError
 from backend.models.generation import (
     GeneratedExamDetail,
@@ -163,6 +164,7 @@ async def create_generation_request(
     supabase: Client = Depends(get_user_client),
     admin_supabase: Client = Depends(get_admin_client),
 ) -> GenerationRequestRead:
+    check_rate_limit(user_id=user.id, endpoint="generation", max_calls=5)
     _workspace_service(supabase).get(user_id=user.id, workspace_id=workspace_id)
 
     request_id = uuid4()

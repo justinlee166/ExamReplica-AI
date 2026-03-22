@@ -10,6 +10,7 @@ from supabase import Client
 from backend.config.settings import Settings, get_settings
 from backend.config.supabase_client import get_admin_client, get_user_client
 from backend.middleware.auth import AuthenticatedUser, get_current_user
+from backend.middleware.rate_limit import check_rate_limit
 from backend.models.errors import NotFoundError
 from backend.models.regeneration import RegenerationRequestCreate, RegenerationRequestResponse
 from backend.services.analytics.service import build_analytics_service
@@ -77,6 +78,7 @@ async def create_regeneration_request(
     Links the new request to the latest analytics snapshot (creating one if absent).
     The generation pipeline runs asynchronously; poll GET to check status.
     """
+    check_rate_limit(user_id=user.id, endpoint="regeneration", max_calls=5)
     _workspace_service(supabase).get(user_id=user.id, workspace_id=workspace_id)
 
     snapshot_id = _ensure_analytics_snapshot(
