@@ -7,15 +7,15 @@ from pydantic import BaseModel, Field
 
 
 class WorkspaceCreateRequest(BaseModel):
-    title: str = Field(min_length=1, max_length=200)
-    course_code: str | None = Field(default=None, max_length=50)
-    description: str | None = Field(default=None, max_length=2000)
+    title: str = Field(min_length=1, max_length=120)
+    course_code: str | None = Field(default=None, max_length=20)
+    description: str | None = Field(default=None, max_length=1000)
 
 
 class WorkspaceUpdateRequest(BaseModel):
-    title: str | None = Field(default=None, min_length=1, max_length=200)
-    course_code: str | None = Field(default=None, max_length=50)
-    description: str | None = Field(default=None, max_length=2000)
+    title: str | None = Field(default=None, min_length=1, max_length=120)
+    course_code: str | None = Field(default=None, max_length=20)
+    description: str | None = Field(default=None, max_length=1000)
 
 
 class WorkspaceResponse(BaseModel):

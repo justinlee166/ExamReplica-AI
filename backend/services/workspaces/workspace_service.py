@@ -5,7 +5,7 @@ from uuid import UUID
 
 from supabase import Client
 
-from backend.models.errors import BadRequestError, NotFoundError
+from backend.models.errors import BadRequestError, ForbiddenError, NotFoundError
 from backend.models.workspace import (
     WorkspaceCreateRequest,
     WorkspaceDetailResponse,
@@ -43,6 +43,33 @@ class WorkspaceService:
         if not isinstance(resp.data, list):
             raise BadRequestError("Unexpected response from database")
         return [WorkspaceResponse.model_validate(row) for row in resp.data]
+
+    def get_or_forbidden(
+        self,
+        *,
+        user_id: UUID,
+        workspace_id: UUID,
+        admin_supabase: Client,
+    ) -> WorkspaceResponse:
+        """Return workspace if user owns it.
+
+        Uses admin client to check existence without RLS interference:
+        - 404 if workspace does not exist
+        - 403 if workspace exists but belongs to a different user
+        - workspace record if user is the owner
+        """
+        admin_resp = (
+            admin_supabase.table("workspaces")
+            .select("user_id")
+            .eq("id", str(workspace_id))
+            .limit(1)
+            .execute()
+        )
+        if not admin_resp.data:
+            raise NotFoundError("Workspace not found")
+        if admin_resp.data[0]["user_id"] != str(user_id):
+            raise ForbiddenError("Access denied")
+        return self.get(user_id=user_id, workspace_id=workspace_id)
 
     def get(self, *, user_id: UUID, workspace_id: UUID) -> WorkspaceResponse:
         resp = (

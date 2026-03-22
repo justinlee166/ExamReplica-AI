@@ -15,7 +15,7 @@ DifficultyLabel = Literal["easy", "moderate", "moderate-hard", "hard"]
 
 
 class GenerationConfig(BaseModel):
-    question_count: int = Field(ge=1, le=100)
+    question_count: int = Field(ge=3, le=30)
     format_type: FormatType
     difficulty: DifficultyLabel | None = None
     question_types: list[QuestionType] = Field(default_factory=list, max_length=4)
@@ -24,7 +24,7 @@ class GenerationConfig(BaseModel):
 class ScopeConstraints(BaseModel):
     topics: list[str] = Field(default_factory=list, max_length=15)
     document_ids: list[UUID] = Field(default_factory=list)
-    custom_prompt: str | None = Field(default=None, max_length=2000)
+    custom_prompt: str | None = Field(default=None, max_length=500)
 
 
 class GenerationRequestCreate(BaseModel):

@@ -357,6 +357,22 @@
   - All Recharts components inside `ResponsiveContainer`; recharts imported from existing `package.json` dependency
   - TypeScript strict mode; all types match backend API response shape
 
+---
+
+## Phase 7: Polish and Reliability
+
+### T-701: Backend Hardening — Error Handling, Input Validation, Rate Limiting
+- **Phase:** 7
+- **Status:** Complete
+- **Goal:** Harden all backend routes for production — typed errors, strict input validation, rate limiting, and safe background job failure handling
+- **Acceptance Criteria:**
+  - `ForbiddenError` (403), `ConflictError` (409), `TooManyRequestsError` (429) added to `backend/models/errors.py`
+  - `WorkspaceService.get_or_forbidden()` distinguishes 404 (not found) from 403 (wrong owner) using admin client
+  - Pydantic constraints tightened: workspace title ≤ 120, course_code ≤ 20, description ≤ 1000; generation question_count 3–30, custom_prompt ≤ 500; regeneration concepts ≤ 60 chars each
+  - In-process sliding-window rate limiter in `backend/middleware/rate_limit.py`; limits: generation 5/min, profile generate 3/min, regeneration 5/min; returns 429 with retry-after message
+  - All background jobs (generation, grading, document processing, regeneration) have `try/except` that logs at ERROR and updates status to `"failed"` — no crash propagation
+  - 18 tests in `backend/tests/test_phase7_backend_hardening.py`, all passing
+
 ## Future Phases
 
-Tasks for Phase 7 will be added as earlier phases are completed. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
+Tasks for remaining Phase 7 items and beyond will be added as work continues. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.
