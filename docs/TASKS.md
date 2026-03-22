@@ -373,6 +373,32 @@
   - All background jobs (generation, grading, document processing, regeneration) have `try/except` that logs at ERROR and updates status to `"failed"` — no crash propagation
   - 18 tests in `backend/tests/test_phase7_backend_hardening.py`, all passing
 
+### T-702: Frontend UX Hardening — Loading States, Error Messages, Responsive Layout
+- **Phase:** 7
+- **Status:** Complete
+- **Goal:** Harden the existing dashboard UX across workspace, generation, grading, profile, and analytics flows with clear loading states, user-friendly error handling, and tablet-safe responsive layouts
+- **Acceptance Criteria:**
+  - Shared frontend error utility maps API errors to user-facing messages and retryability
+  - Global toast notifications surface async failures instead of silent catches
+  - Workspace list/detail, professor profile, generation, exam, grading, and analytics pages all show loading indicators or skeletons during initial async work
+  - Async action buttons show spinners and disable while pending
+  - Document upload shows upload progress and delete actions require confirmation dialogs
+  - Generation and grading polling views show active working indicators with time expectations
+  - Dashboard shell uses a responsive sidebar with a header toggle at tablet/mobile widths
+  - Workspace, document, and exam list pages include explicit empty states with next-step actions
+
+### T-703: Security Audit — Auth Guards, RLS, Input Sanitization
+- **Phase:** 7
+- **Status:** Complete
+- **Goal:** Harden backend auth enforcement, complete RLS coverage for Phase 6 tables, and remove risky logging or upload handling gaps
+- **Acceptance Criteria:**
+  - Every non-health router applies `Depends(get_current_user)` at the router level and validates workspace ownership before nested resource access
+  - Cross-user access to an existing workspace resolves as 403 via `WorkspaceService.get_or_forbidden()` instead of leaking existence through 404 behavior
+  - `migrations/013_phase7_rls_audit.sql` completes missing CRUD policy coverage for `users`, `submission_answers`, `grading_results`, and `error_classifications`
+  - Startup fails fast when required secrets are missing: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`, `GEMINI_API_KEY`
+  - Upload validation rejects unsupported MIME types with 415 and files larger than 25 MB with 413 before storage write
+  - INFO/ERROR logging avoids user-submitted content, tokens, and upstream response bodies
+
 ## Future Phases
 
 Tasks for remaining Phase 7 items and beyond will be added as work continues. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.

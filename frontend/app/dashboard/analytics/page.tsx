@@ -38,6 +38,9 @@ import {
   type Workspace,
   type MasteryLevel,
 } from "@/lib/apiClient"
+import { toast } from "@/hooks/use-toast"
+import { getErrorMessage, isUnauthorizedError } from "@/lib/errorMessages"
+import { LoadingState } from "@/components/ui/loading-state"
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -224,6 +227,7 @@ export default function AnalyticsPage() {
   const router = useRouter()
 
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  const [workspaceLoading, setWorkspaceLoading] = useState(true)
   const [workspaceId, setWorkspaceId] = useState<string>("")
   const [analytics, setAnalytics] = useState<AnalyticsResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -234,11 +238,29 @@ export default function AnalyticsPage() {
 
   // fetch workspaces on mount
   useEffect(() => {
-    apiClient.listWorkspaces().then((ws) => {
-      setWorkspaces(ws)
-      if (ws.length > 0) setWorkspaceId(ws[0].id)
-    }).catch(() => {})
-  }, [])
+    setWorkspaceLoading(true)
+    apiClient
+      .listWorkspaces()
+      .then((ws) => {
+        setWorkspaces(ws)
+        if (ws.length > 0) setWorkspaceId(ws[0].id)
+      })
+      .catch((err) => {
+        const message = getErrorMessage(err)
+        setError(message)
+        toast({
+          variant: "destructive",
+          title: "Unable to load workspaces",
+          description: message,
+        })
+        if (isUnauthorizedError(err)) {
+          router.replace("/login")
+        }
+      })
+      .finally(() => {
+        setWorkspaceLoading(false)
+      })
+  }, [router])
 
   // fetch analytics when workspace changes
   useEffect(() => {
@@ -247,14 +269,27 @@ export default function AnalyticsPage() {
     setError(null)
     setAnalytics(null)
     setPracticeStates({})
-    apiClient.getAnalytics(workspaceId).then((data) => {
-      setAnalytics(data)
-    }).catch((err) => {
-      setError(err instanceof Error ? err.message : "Failed to load analytics")
-    }).finally(() => {
-      setLoading(false)
-    })
-  }, [workspaceId])
+    apiClient
+      .getAnalytics(workspaceId)
+      .then((data) => {
+        setAnalytics(data)
+      })
+      .catch((err) => {
+        const message = getErrorMessage(err)
+        setError(message)
+        toast({
+          variant: "destructive",
+          title: "Unable to load analytics",
+          description: message,
+        })
+        if (isUnauthorizedError(err)) {
+          router.replace("/login")
+        }
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [workspaceId, router])
 
   // cleanup polling on unmount
   useEffect(() => {
@@ -277,8 +312,16 @@ export default function AnalyticsPage() {
           format_type: "mixed",
         })
         requestId = resp.id
-      } catch {
+      } catch (err) {
         setPracticeStates((prev) => ({ ...prev, [concept]: { status: "failed" } }))
+        toast({
+          variant: "destructive",
+          title: "Unable to start targeted practice",
+          description: getErrorMessage(err),
+        })
+        if (isUnauthorizedError(err)) {
+          router.replace("/login")
+        }
         return
       }
 
@@ -294,10 +337,18 @@ export default function AnalyticsPage() {
             delete pollIntervalsRef.current[concept]
             setPracticeStates((prev) => ({ ...prev, [concept]: { status: "failed" } }))
           }
-        } catch {
+        } catch (err) {
           clearInterval(intervalId)
           delete pollIntervalsRef.current[concept]
           setPracticeStates((prev) => ({ ...prev, [concept]: { status: "failed" } }))
+          toast({
+            variant: "destructive",
+            title: "Unable to refresh targeted practice status",
+            description: getErrorMessage(err),
+          })
+          if (isUnauthorizedError(err)) {
+            router.replace("/login")
+          }
         }
       }, 3000)
 
@@ -313,7 +364,7 @@ export default function AnalyticsPage() {
     analytics.recommendations.length === 0
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-4 md:p-6">
       {/* Header */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
@@ -323,7 +374,7 @@ export default function AnalyticsPage() {
           </p>
         </div>
         <Select value={workspaceId} onValueChange={setWorkspaceId}>
-          <SelectTrigger className="w-[220px]">
+          <SelectTrigger className="w-full sm:w-[220px]">
             <SelectValue placeholder="Select workspace…" />
           </SelectTrigger>
           <SelectContent>
@@ -337,22 +388,41 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Loading */}
-      {loading && (
+      {workspaceLoading && !workspaceId && (
+        <LoadingState
+          title="Loading analytics workspaces..."
+          description="Preparing your analytics dashboard."
+        />
+      )}
+
+      {loading && !workspaceLoading && (
         <div className="flex items-center justify-center py-24">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       )}
 
       {/* Error */}
-      {error && !loading && (
-        <div className="flex items-center gap-2 text-destructive py-8">
-          <AlertCircle className="h-5 w-5" />
-          <span>{error}</span>
-        </div>
+      {error && !loading && !workspaceLoading && (
+        <Card className="border-destructive/30">
+          <CardContent className="flex flex-col gap-4 px-6 py-8">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              <span className="font-medium">Unable to load analytics</span>
+            </div>
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <Button
+              variant="outline"
+              className="w-fit"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {/* No workspace selected */}
-      {!workspaceId && !loading && (
+      {!workspaceLoading && !workspaceId && !loading && !error && (
         <div className="flex flex-col items-center justify-center py-24 text-center gap-3">
           <Brain className="h-12 w-12 text-muted-foreground/40" />
           <p className="text-muted-foreground">Select a workspace above to view analytics.</p>

@@ -6,6 +6,8 @@ from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from backend.models.errors import ConfigError
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -37,6 +39,24 @@ class Settings(BaseSettings):
 
     chroma_persist_directory: str = "./storage/chromadb"
     chroma_collection_name: str = "document_chunks"
+
+    def validate_required_secrets(self) -> None:
+        missing: list[str] = []
+        required_values = {
+            "SUPABASE_URL": self.supabase_url,
+            "SUPABASE_SERVICE_KEY": self.supabase_service_key,
+            "SUPABASE_JWT_SECRET": self.supabase_jwt_secret,
+            "GEMINI_API_KEY": self.gemini_api_key,
+        }
+
+        for name, value in required_values.items():
+            if value is None or not value.strip():
+                missing.append(name)
+
+        if missing:
+            raise ConfigError(
+                f"Missing required environment variables: {', '.join(sorted(missing))}"
+            )
 
 
 @lru_cache

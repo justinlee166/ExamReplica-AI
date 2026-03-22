@@ -271,7 +271,7 @@ def test_processing_job_marks_document_failed_when_parser_raises(tmp_path: Path)
 
     assert document_row["processing_status"] == "failed"
     assert job_row["status"] == "failed"
-    assert "parser exploded" in str(job_row["error_message"])
+    assert job_row["error_message"] == "Document processing failed. Review server logs for details."
     assert supabase.tables["parsed_documents"] == []
     assert supabase.tables["chunks"] == []
     assert supabase.tables["chunk_embeddings"] == []

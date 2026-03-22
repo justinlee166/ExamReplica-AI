@@ -12,6 +12,8 @@
 
 ## User and Workspace Entities
 
+> **RLS:** `migrations/003_rls_policies.sql` enables row-level security for `users`, `workspaces`, and `documents`. `migrations/013_phase7_rls_audit.sql` completes the missing `users` self-service insert/delete policies identified during the Phase 7 security audit.
+
 ### `users`
 
 Primary user accounts.
@@ -212,6 +214,8 @@ Individual questions within a generated exam.
 ---
 
 ## Submission and Grading Entities
+
+> **RLS:** `migrations/009_submission_grading_tables.sql` creates the submission/grading tables and their initial RLS policies. `migrations/013_phase7_rls_audit.sql` completes the missing `submission_answers` update/delete, `grading_results` delete, and `error_classifications` update policies.
 
 ### `submissions`
 

@@ -107,7 +107,7 @@ def build_grading_service_from_supabase(
 ) -> GradingService:
     """Wire up a GradingService backed by Supabase and Gemini."""
     if not settings.gemini_api_key:
-        raise ConfigError("GEMINI_API_KEY is required for grading")
+        raise ConfigError("Gemini API key is required for grading")
 
     gemini_caller = GeminiGradingCaller(
         api_key=settings.gemini_api_key,

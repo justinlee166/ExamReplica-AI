@@ -405,15 +405,72 @@ export const apiClient = {
     file: File;
     source_type: DocumentSourceType;
     upload_label?: string;
+    onProgress?: (percent: number) => void;
   }): Promise<Document> {
     const form = new FormData();
     form.append("file", input.file);
     form.append("source_type", input.source_type);
     if (input.upload_label) form.append("upload_label", input.upload_label);
 
-    return request<Document>(`/api/workspaces/${encodeURIComponent(input.workspaceId)}/documents`, {
-      method: "POST",
-      body: form,
+    return new Promise<Document>(async (resolve, reject) => {
+      try {
+        const token = await getAccessToken();
+        const xhr = new XMLHttpRequest();
+        xhr.open(
+          "POST",
+          `${getBaseUrl()}/api/workspaces/${encodeURIComponent(input.workspaceId)}/documents`,
+        );
+        xhr.setRequestHeader("accept", "application/json");
+        xhr.setRequestHeader("authorization", `Bearer ${token}`);
+
+        xhr.upload.onprogress = (event) => {
+          if (!event.lengthComputable || !input.onProgress) {
+            return;
+          }
+
+          input.onProgress(Math.round((event.loaded / event.total) * 100));
+        };
+
+        xhr.onload = () => {
+          const contentType = xhr.getResponseHeader("content-type") ?? "";
+          const isJson = contentType.includes("application/json");
+          let body: unknown = null;
+
+          if (xhr.responseText) {
+            if (isJson) {
+              try {
+                body = JSON.parse(xhr.responseText);
+              } catch {
+                body = xhr.responseText;
+              }
+            } else {
+              body = xhr.responseText;
+            }
+          }
+
+          if (xhr.status >= 200 && xhr.status < 300) {
+            if (input.onProgress) {
+              input.onProgress(100);
+            }
+            resolve(body as Document);
+            return;
+          }
+
+          const detail =
+            typeof body === "object" && body !== null && "detail" in body
+              ? (body as { detail: unknown }).detail
+              : body;
+          reject(new ApiError(`Request failed: ${xhr.status}`, xhr.status, detail));
+        };
+
+        xhr.onerror = () => {
+          reject(new ApiError("Network error", 500, "Upload failed"));
+        };
+
+        xhr.send(form);
+      } catch (error) {
+        reject(error);
+      }
     });
   },
 

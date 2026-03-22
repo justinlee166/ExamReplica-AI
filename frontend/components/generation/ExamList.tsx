@@ -66,8 +66,8 @@ export function ExamList({ exams, workspaceId }: ExamListProps) {
           className="block"
         >
           <Card className="border-border/70 transition-colors hover:border-primary/30 hover:bg-muted/30">
-            <CardContent className="flex items-center justify-between gap-4 px-6 py-4">
-              <div className="flex items-center gap-4 min-w-0">
+            <CardContent className="flex flex-col gap-4 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-4">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
                   <FileText className="h-5 w-5 text-primary" />
                 </div>
@@ -78,7 +78,7 @@ export function ExamList({ exams, workspaceId }: ExamListProps) {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
                 <Badge variant="outline" className="rounded-full">
                   {toTitleCase(exam.exam_mode)}
                 </Badge>

@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { Loader2, Clock, TriangleAlert } from "lucide-react";
 
-import { apiClient, ApiError, type GenerationRequestRead } from "@/lib/apiClient";
+import { apiClient, type GenerationRequestRead } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { getErrorMessage } from "@/lib/errorMessages";
 
 type GenerationStatusPollerProps = {
   workspaceId: string;
@@ -24,10 +25,14 @@ export function GenerationStatusPoller({
 }: GenerationStatusPollerProps) {
   const [request, setRequest] = useState<GenerationRequestRead | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
     let active = true;
     let timer: ReturnType<typeof setInterval> | null = null;
+    const elapsedTimer = window.setInterval(() => {
+      setElapsedSeconds((current) => current + 1);
+    }, 1000);
 
     async function poll() {
       try {
@@ -37,24 +42,21 @@ export function GenerationStatusPoller({
 
         if (result.status === "completed" && result.generated_exam_id) {
           if (timer) clearInterval(timer);
+          window.clearInterval(elapsedTimer);
           onCompleted(result.generated_exam_id);
           return;
         }
 
         if (result.status === "failed") {
           if (timer) clearInterval(timer);
+          window.clearInterval(elapsedTimer);
           return;
         }
       } catch (err) {
         if (!active) return;
-        const msg =
-          err instanceof ApiError && typeof err.detail === "string"
-            ? err.detail
-            : err instanceof Error
-              ? err.message
-              : "Failed to check generation status.";
-        setError(msg);
+        setError(getErrorMessage(err));
         if (timer) clearInterval(timer);
+        window.clearInterval(elapsedTimer);
       }
     }
 
@@ -64,6 +66,7 @@ export function GenerationStatusPoller({
     return () => {
       active = false;
       if (timer) clearInterval(timer);
+      window.clearInterval(elapsedTimer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, requestId]);
@@ -111,13 +114,17 @@ export function GenerationStatusPoller({
           <Clock id="generation-queued-icon" className="h-10 w-10 text-muted-foreground" />
         )}
         <h2 className="text-lg font-semibold text-foreground">
-          {isRunning ? "Generating Your Exam..." : "Request Queued"}
+          {isRunning ? "Generating your exam..." : "Working on your request..."}
         </h2>
         <p className="max-w-md text-sm text-muted-foreground">
           {isRunning
-            ? "The backend is building your exam using the professor profile and indexed materials. This may take a minute."
-            : "Your generation request is in the queue. It will start processing shortly."}
+            ? "The backend is building your exam using the professor profile and indexed materials."
+            : "Your generation request is queued and should begin shortly."}
         </p>
+        <div className="rounded-2xl border border-border/70 bg-background/70 px-4 py-3 text-sm text-muted-foreground">
+          <p>Generation typically takes 15–30 seconds.</p>
+          <p className="mt-1">Elapsed time: {elapsedSeconds}s</p>
+        </div>
       </CardContent>
     </Card>
   );

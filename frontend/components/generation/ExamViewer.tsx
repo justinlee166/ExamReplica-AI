@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { Download, Loader2, Send } from "lucide-react";
 
-import { apiClient, ApiError } from "@/lib/apiClient";
+import { apiClient } from "@/lib/apiClient";
 import type {
   GeneratedExamDetail,
   AnswerItem,
@@ -14,6 +14,12 @@ import { Button } from "@/components/ui/button";
 import { ExamQuestionCard } from "@/components/generation/ExamQuestionCard";
 import { GradingStatusPoller } from "@/components/submission/GradingStatusPoller";
 import { GradingResultsViewer } from "@/components/submission/GradingResultsViewer";
+import { toast } from "@/hooks/use-toast";
+import {
+  getErrorMessage,
+  getValidationErrors,
+  isUnauthorizedError,
+} from "@/lib/errorMessages";
 
 type ExamViewerProps = {
   exam: GeneratedExamDetail;
@@ -53,6 +59,7 @@ export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
   const [submissionResult, setSubmissionResult] =
     useState<SubmissionRead | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitFieldErrors, setSubmitFieldErrors] = useState<Record<string, string>>({});
 
   const answeredCount = Object.values(answers).filter((v) => v.trim()).length;
 
@@ -77,9 +84,16 @@ export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
       document.body.removeChild(anchor);
       URL.revokeObjectURL(url);
     } catch (err) {
-      setDownloadError(
-        err instanceof Error ? err.message : "PDF download failed.",
-      );
+      const message = getErrorMessage(err);
+      setDownloadError(message);
+      toast({
+        variant: "destructive",
+        title: "Unable to download PDF",
+        description: message,
+      });
+      if (isUnauthorizedError(err)) {
+        window.setTimeout(() => window.location.assign("/login"), 800);
+      }
     } finally {
       setDownloading(false);
     }
@@ -99,9 +113,16 @@ export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
       document.body.removeChild(anchor);
       URL.revokeObjectURL(url);
     } catch (err) {
-      setDownloadError(
-        err instanceof Error ? err.message : "Solutions PDF download failed.",
-      );
+      const message = getErrorMessage(err);
+      setDownloadError(message);
+      toast({
+        variant: "destructive",
+        title: "Unable to download solutions PDF",
+        description: message,
+      });
+      if (isUnauthorizedError(err)) {
+        window.setTimeout(() => window.location.assign("/login"), 800);
+      }
     } finally {
       setDownloadingSolutions(false);
     }
@@ -109,6 +130,7 @@ export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
 
   async function handleSubmit() {
     setSubmitError(null);
+    setSubmitFieldErrors({});
     setSubmitting(true);
 
     const answerItems: AnswerItem[] = exam.questions
@@ -131,13 +153,20 @@ export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
       setSubmissionId(result.id);
       setPhase("grading");
     } catch (err) {
-      const msg =
-        err instanceof ApiError && typeof err.detail === "string"
-          ? err.detail
-          : err instanceof Error
-            ? err.message
-            : "Submission failed.";
-      setSubmitError(msg);
+      const validationErrors = getValidationErrors(err);
+      if (Object.keys(validationErrors).length > 0) {
+        setSubmitFieldErrors(validationErrors);
+      }
+      const message = getErrorMessage(err);
+      setSubmitError(message);
+      toast({
+        variant: "destructive",
+        title: "Unable to submit answers",
+        description: message,
+      });
+      if (isUnauthorizedError(err)) {
+        window.setTimeout(() => window.location.assign("/login"), 800);
+      }
       setSubmitting(false);
     }
   }
@@ -202,7 +231,7 @@ export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Button
             id="exam-download-pdf-button"
             variant="outline"
@@ -251,6 +280,9 @@ export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
       {submitError && (
         <p className="text-sm text-destructive">{submitError}</p>
       )}
+      {submitFieldErrors.answers ? (
+        <p className="text-sm text-destructive">{submitFieldErrors.answers}</p>
+      ) : null}
 
       {/* Questions */}
       <div className="space-y-4">
@@ -271,7 +303,7 @@ export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
 
       {/* Submit button */}
       {interactiveMode && (
-        <div className="flex items-center justify-end gap-4 pt-2">
+        <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-end">
           <span className="text-sm text-muted-foreground">
             {answeredCount} of {exam.questions.length} answered
           </span>
@@ -288,7 +320,7 @@ export function ExamViewer({ exam, workspaceId, reviewOnly }: ExamViewerProps) {
             ) : (
               <>
                 <Send className="mr-2 h-4 w-4" />
-                Submit Exam
+                Submit Answers
               </>
             )}
           </Button>

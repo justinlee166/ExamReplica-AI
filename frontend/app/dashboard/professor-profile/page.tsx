@@ -10,6 +10,8 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/hooks/use-toast";
+import { getErrorMessage, isUnauthorizedError } from "@/lib/errorMessages";
 
 export default function ProfessorProfilePage() {
   const router = useRouter();
@@ -26,7 +28,16 @@ export default function ProfessorProfilePage() {
       setWorkspaces(nextWorkspaces);
     } catch (err) {
       console.error("Failed to load workspaces for professor profile hub", err);
-      setError("We couldn't load your workspaces right now.");
+      const message = getErrorMessage(err);
+      setError(message);
+      toast({
+        variant: "destructive",
+        title: "Unable to load workspaces",
+        description: message,
+      });
+      if (isUnauthorizedError(err)) {
+        router.replace("/login");
+      }
     } finally {
       setLoading(false);
     }
@@ -46,7 +57,7 @@ export default function ProfessorProfilePage() {
   }, [router]);
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 md:p-6">
       <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-background to-background">
         <CardContent className="px-6 py-8">
           <div className="max-w-3xl space-y-4">
@@ -135,7 +146,7 @@ export default function ProfessorProfilePage() {
                   {workspace.description ? ` · ${workspace.description}` : ""}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex items-center justify-between gap-4">
+              <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
                   {workspace.profile_status ?? "Profile ready when generated"}
                 </div>

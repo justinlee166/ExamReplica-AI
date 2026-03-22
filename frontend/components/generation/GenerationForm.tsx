@@ -25,6 +25,12 @@ import {
   type GenerationDifficulty,
   type GenerationQuestionType,
 } from "@/lib/apiClient";
+import { toast } from "@/hooks/use-toast";
+import {
+  getErrorMessage,
+  getValidationErrors,
+  isUnauthorizedError,
+} from "@/lib/errorMessages";
 
 type GenerationFormProps = {
   workspaceId: string;
@@ -53,6 +59,7 @@ export function GenerationForm({ workspaceId, onCreated }: GenerationFormProps) 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [countError, setCountError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   function handleQuestionTypeToggle(qt: GenerationQuestionType, checked: boolean) {
     setQuestionTypes((prev) =>
@@ -88,6 +95,7 @@ export function GenerationForm({ workspaceId, onCreated }: GenerationFormProps) 
 
     setSubmitting(true);
     setError(null);
+    setFieldErrors({});
 
     try {
       const topicList = topics
@@ -113,7 +121,21 @@ export function GenerationForm({ workspaceId, onCreated }: GenerationFormProps) 
       });
       onCreated(result.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Generation request failed.");
+      const validationErrors = getValidationErrors(err);
+      if (Object.keys(validationErrors).length > 0) {
+        setFieldErrors(validationErrors);
+      }
+
+      const message = getErrorMessage(err);
+      setError(message);
+      toast({
+        variant: "destructive",
+        title: "Unable to start generation",
+        description: message,
+      });
+      if (isUnauthorizedError(err)) {
+        window.setTimeout(() => window.location.assign("/login"), 800);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -157,7 +179,7 @@ export function GenerationForm({ workspaceId, onCreated }: GenerationFormProps) 
               id="generation-format-type"
               value={formatType}
               onValueChange={(v) => setFormatType(v as GenerationFormatType)}
-              className="flex gap-6"
+              className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-6"
             >
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="mcq" id="format-mcq" />
@@ -172,6 +194,11 @@ export function GenerationForm({ workspaceId, onCreated }: GenerationFormProps) 
                 <Label htmlFor="format-mixed" className="font-normal">Mixed</Label>
               </div>
             </RadioGroup>
+            {fieldErrors["generation_config.format_type"] ? (
+              <p className="text-sm text-destructive">
+                {fieldErrors["generation_config.format_type"]}
+              </p>
+            ) : null}
           </div>
 
           {/* Question Count + Difficulty (side by side) */}
@@ -191,6 +218,11 @@ export function GenerationForm({ workspaceId, onCreated }: GenerationFormProps) 
                   {countError}
                 </p>
               )}
+              {fieldErrors["generation_config.question_count"] ? (
+                <p className="text-sm text-destructive">
+                  {fieldErrors["generation_config.question_count"]}
+                </p>
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -209,6 +241,11 @@ export function GenerationForm({ workspaceId, onCreated }: GenerationFormProps) 
                   <SelectItem value="hard">Hard</SelectItem>
                 </SelectContent>
               </Select>
+              {fieldErrors["generation_config.difficulty"] ? (
+                <p className="text-sm text-destructive">
+                  {fieldErrors["generation_config.difficulty"]}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -231,6 +268,11 @@ export function GenerationForm({ workspaceId, onCreated }: GenerationFormProps) 
                 </div>
               ))}
             </div>
+            {fieldErrors["generation_config.question_types"] ? (
+              <p className="text-sm text-destructive">
+                {fieldErrors["generation_config.question_types"]}
+              </p>
+            ) : null}
           </div>
 
           {/* Topics (optional) */}
@@ -242,6 +284,11 @@ export function GenerationForm({ workspaceId, onCreated }: GenerationFormProps) 
               onChange={(e) => setTopics(e.target.value)}
               placeholder="e.g. hypothesis_testing, confidence_intervals"
             />
+            {fieldErrors["scope_constraints.topics"] ? (
+              <p className="text-sm text-destructive">
+                {fieldErrors["scope_constraints.topics"]}
+              </p>
+            ) : null}
           </div>
 
           {/* Custom Prompt (optional) */}
@@ -254,6 +301,11 @@ export function GenerationForm({ workspaceId, onCreated }: GenerationFormProps) 
               placeholder="e.g. Focus on two-sample tests"
               rows={3}
             />
+            {fieldErrors["scope_constraints.custom_prompt"] ? (
+              <p className="text-sm text-destructive">
+                {fieldErrors["scope_constraints.custom_prompt"]}
+              </p>
+            ) : null}
           </div>
 
           {/* Submit */}
@@ -263,7 +315,7 @@ export function GenerationForm({ workspaceId, onCreated }: GenerationFormProps) 
             id="generation-submit-button"
             type="submit"
             disabled={submitting || !!countError}
-            className="min-w-[200px]"
+            className="w-full sm:min-w-[200px] sm:w-auto"
           >
             {submitting ? (
               <>

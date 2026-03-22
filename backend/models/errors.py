@@ -16,6 +16,11 @@ class BadRequestError(AppError):
     detail = "Bad Request"
 
 
+class PayloadTooLargeError(AppError):
+    status_code = 413
+    detail = "Request Entity Too Large"
+
+
 class UnauthorizedError(AppError):
     status_code = 401
     detail = "Unauthorized"
@@ -44,6 +49,11 @@ class ForbiddenError(AppError):
 class ConflictError(AppError):
     status_code = 409
     detail = "Conflict"
+
+
+class UnsupportedMediaTypeError(AppError):
+    status_code = 415
+    detail = "Unsupported Media Type"
 
 
 class ServiceUnavailableError(AppError):

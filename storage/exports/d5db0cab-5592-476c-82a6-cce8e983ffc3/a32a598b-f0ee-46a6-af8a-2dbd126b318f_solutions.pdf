@@ -1,0 +1,155 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 2778 >>
+stream
+BT
+/F1 12 Tf
+14 TL
+72 720 Td
+(Practice: HTTP Performance & Persistence, DNS Resolution Mechanics, Network Performance Metrics) Tj
+T*
+() Tj
+T*
+(Question 1) Tj
+T*
+(In the Domain Name System \(DNS\), a local DNS server is tasked with resolving a hostname) Tj
+T*
+(for which it has no cached records. If the local DNS server is configured to use) Tj
+T*
+(iterative queries, which of the following best describes the sequence of interactions) Tj
+T*
+(required to resolve the name?) Tj
+T*
+() Tj
+T*
+(Answer: D) Tj
+T*
+() Tj
+T*
+(Solution:) Tj
+T*
+(In an iterative DNS query, the local DNS server manages the resolution process by) Tj
+T*
+(contacting different hierarchy levels itself. It first queries a Root server, which) Tj
+T*
+(provides a referral to the TLD server. It then queries the TLD server, which provides a) Tj
+T*
+(referral to the Authoritative server. Finally, it queries the Authoritative server to) Tj
+T*
+(obtain the specific IP address mapping. This is distinct from recursive queries where) Tj
+T*
+(the contacted server takes on the responsibility of returning the final mapping.) Tj
+T*
+() Tj
+T*
+(Question 2) Tj
+T*
+(Consider a scenario where a client uses HTTP/1.1 with persistent connections \(without) Tj
+T*
+(pipelining\) to retrieve a base HTML file and 6 embedded images from a server. The Round) Tj
+T*
+(Trip Time \(RTT\) between the client and the server is 50 ms. Assume the transmission time) Tj
+T*
+(for the request messages and the small objects is negligible. How much total time \(in) Tj
+T*
+(milliseconds\) elapses from the moment the client initiates the TCP connection until the) Tj
+T*
+(last image is fully received?) Tj
+T*
+() Tj
+T*
+(Answer: 400 ms) Tj
+T*
+() Tj
+T*
+(Solution:) Tj
+T*
+(In HTTP/1.1 persistent connections without pipelining, the process begins with a TCP) Tj
+T*
+(three-way handshake \(1 RTT\). The base HTML file is then requested and received \(1 RTT\).) Tj
+T*
+(Because the connection is persistent, the client does not need to re-establish the TCP) Tj
+T*
+(connection for the embedded objects. However, without pipelining, the client must send) Tj
+T*
+(each of the 6 image requests sequentially, waiting for the previous response to arrive) Tj
+T*
+(before sending the next, resulting in 6 additional RTTs. Total time = \(1 + 1 + 6\) * 50) Tj
+T*
+(ms = 400 ms.) Tj
+T*
+() Tj
+T*
+(Question 3) Tj
+T*
+(A point-to-point fiber optic link has a bandwidth of 10 Gbps and a length of 2,000 km.) Tj
+T*
+(The propagation speed of the signal in the fiber is 200,000 km/s. Calculate the) Tj
+T*
+(bandwidth-delay product for this link in bits. Additionally, determine the physical) Tj
+T*
+(length \(in meters\) of a single bit as it propagates through the fiber.) Tj
+T*
+() Tj
+T*
+(Answer: BDP: 100,000,000 bits; Bit Length: 0.02 meters) Tj
+T*
+() Tj
+T*
+(Solution:) Tj
+T*
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 497 >>
+stream
+BT
+/F1 12 Tf
+14 TL
+72 720 Td
+(The Bandwidth-Delay Product \(BDP\) is calculated as Bandwidth \(R\) multiplied by) Tj
+T*
+(Propagation Delay \(d_prop\). Here, d_prop = 2,000 km / 200,000 km/s = 0.01 seconds. BDP =) Tj
+T*
+(10^10 bps * 0.01 s = 10^8 bits. The physical length of a bit is the distance the signal) Tj
+T*
+(travels during the time it takes to transmit one bit \(1/R\). Length = Speed \(v\) /) Tj
+T*
+(Bandwidth \(R\) = 200,000,000 m/s / 10,000,000,000 bps = 0.02 meters.) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000191 00000 n 
+0000000317 00000 n 
+0000003147 00000 n 
+0000003273 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+3821
+%%EOF

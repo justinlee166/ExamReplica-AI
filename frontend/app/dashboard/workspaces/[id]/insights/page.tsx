@@ -17,23 +17,8 @@ import { ProfileInsightsSkeleton } from "@/components/profile-insights/ProfileIn
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-
-function getApiErrorMessage(error: unknown, fallbackMessage: string): string {
-  if (error instanceof ApiError) {
-    if (typeof error.detail === "string" && error.detail.length > 0) {
-      return error.detail;
-    }
-    if (error.status === 404) {
-      return "No profile has been generated for this workspace yet.";
-    }
-  }
-
-  if (error instanceof Error && error.message.length > 0) {
-    return error.message;
-  }
-
-  return fallbackMessage;
-}
+import { toast } from "@/hooks/use-toast";
+import { getErrorMessage, isUnauthorizedError } from "@/lib/errorMessages";
 
 export default function WorkspaceInsightsPage() {
   const router = useRouter();
@@ -81,12 +66,21 @@ export default function WorkspaceInsightsPage() {
       throw nextProfileResult.error;
     } catch (error) {
       console.error("Failed to load workspace insights", error);
+      const message =
+        error instanceof ApiError && error.status === 404
+          ? "No profile has been generated for this workspace yet."
+          : getErrorMessage(error);
       setLoadError(
-        getApiErrorMessage(
-          error,
-          "We couldn't load this workspace's insights right now. Try again in a moment.",
-        ),
+        message,
       );
+      toast({
+        variant: "destructive",
+        title: "Unable to load insights",
+        description: message,
+      });
+      if (isUnauthorizedError(error)) {
+        router.replace("/login");
+      }
     } finally {
       setLoading(false);
     }
@@ -102,12 +96,16 @@ export default function WorkspaceInsightsPage() {
       setProfileMissing(false);
     } catch (error) {
       console.error("Failed to generate professor profile", error);
-      setActionError(
-        getApiErrorMessage(
-          error,
-          "Profile generation failed. Check that your materials are indexed, then try again.",
-        ),
-      );
+      const message = getErrorMessage(error);
+      setActionError(message);
+      toast({
+        variant: "destructive",
+        title: "Profile generation failed",
+        description: message,
+      });
+      if (isUnauthorizedError(error)) {
+        router.replace("/login");
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -137,7 +135,7 @@ export default function WorkspaceInsightsPage() {
   }, [router, workspaceId]);
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-3">
           <Button variant="ghost" asChild className="w-fit px-0 hover:bg-transparent">
@@ -159,7 +157,7 @@ export default function WorkspaceInsightsPage() {
           id="generate-or-update-profile-button"
           onClick={() => void handleGenerateProfile()}
           disabled={loading || isGenerating}
-          className="min-w-[220px]"
+          className="w-full sm:min-w-[220px] sm:w-auto"
         >
           {isGenerating ? (
             <>

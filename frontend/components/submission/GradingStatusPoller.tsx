@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { Loader2, TriangleAlert } from "lucide-react";
 
-import { apiClient, ApiError, type SubmissionRead } from "@/lib/apiClient";
+import { apiClient, type SubmissionRead } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { getErrorMessage } from "@/lib/errorMessages";
 
 type GradingStatusPollerProps = {
   workspaceId: string;
@@ -22,10 +23,14 @@ export function GradingStatusPoller({
 }: GradingStatusPollerProps) {
   const [status, setStatus] = useState<string>("submitted");
   const [error, setError] = useState<string | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
     let active = true;
     let timer: ReturnType<typeof setInterval> | null = null;
+    const elapsedTimer = window.setInterval(() => {
+      setElapsedSeconds((current) => current + 1);
+    }, 1000);
 
     async function poll() {
       try {
@@ -35,25 +40,22 @@ export function GradingStatusPoller({
 
         if (result.status === "graded") {
           if (timer) clearInterval(timer);
+          window.clearInterval(elapsedTimer);
           onGraded(result);
           return;
         }
 
         if (result.status === "failed") {
           if (timer) clearInterval(timer);
+          window.clearInterval(elapsedTimer);
           setError("Grading failed. Please try submitting again.");
           return;
         }
       } catch (err) {
         if (!active) return;
-        const msg =
-          err instanceof ApiError && typeof err.detail === "string"
-            ? err.detail
-            : err instanceof Error
-              ? err.message
-              : "Failed to check grading status.";
-        setError(msg);
+        setError(getErrorMessage(err));
         if (timer) clearInterval(timer);
+        window.clearInterval(elapsedTimer);
       }
     }
 
@@ -63,6 +65,7 @@ export function GradingStatusPoller({
     return () => {
       active = false;
       if (timer) clearInterval(timer);
+      window.clearInterval(elapsedTimer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, submissionId]);
@@ -93,14 +96,18 @@ export function GradingStatusPoller({
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
         <h2 className="text-lg font-semibold text-foreground">
           {status === "grading"
-            ? "Grading in Progress..."
-            : "Submission Received"}
+            ? "Grading in progress..."
+            : "Submission received"}
         </h2>
         <p className="max-w-md text-sm text-muted-foreground">
           {status === "grading"
-            ? "Your answers are being evaluated. This usually takes a few seconds."
-            : "Your submission has been received and will begin grading shortly."}
+            ? "Your answers are being evaluated."
+            : "Your submission has been received and grading will begin shortly."}
         </p>
+        <div className="rounded-2xl border border-border/70 bg-background/70 px-4 py-3 text-sm text-muted-foreground">
+          <p>Grading usually finishes in 5–10 seconds.</p>
+          <p className="mt-1">Elapsed time: {elapsedSeconds}s</p>
+        </div>
       </CardContent>
     </Card>
   );

@@ -142,7 +142,7 @@ class GeminiGenerationCaller:
         http_client: httpx.Client | None = None,
     ) -> None:
         if api_key is None or not api_key.strip():
-            raise ConfigError("GEMINI_API_KEY is required for generation")
+            raise ConfigError("Gemini API key is required for generation")
 
         self._api_key = api_key.strip()
         self._model_name = model_name.strip()

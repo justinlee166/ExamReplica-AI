@@ -20,11 +20,27 @@ from backend.services.workspaces.workspace_service import WorkspaceService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["regeneration"])
+# Auth summary: router-level Depends(get_current_user) enforces Supabase JWT validation.
+# Handlers request AuthenticatedUser for cached identity access and authorize workspace ownership before regeneration resources are read or written.
+router = APIRouter(tags=["regeneration"], dependencies=[Depends(get_current_user)])
 
 
 def _workspace_service(supabase: Client) -> WorkspaceService:
     return WorkspaceService(supabase)
+
+
+def _authorize_workspace_access(
+    *,
+    workspace_id: UUID,
+    user: AuthenticatedUser,
+    supabase: Client,
+    admin_supabase: Client,
+) -> None:
+    _workspace_service(supabase).get_or_forbidden(
+        user_id=user.id,
+        workspace_id=workspace_id,
+        admin_supabase=admin_supabase,
+    )
 
 
 def _require_single(data: Any, *, not_found_message: str) -> dict[str, Any]:
@@ -79,7 +95,12 @@ async def create_regeneration_request(
     The generation pipeline runs asynchronously; poll GET to check status.
     """
     check_rate_limit(user_id=user.id, endpoint="regeneration", max_calls=5)
-    _workspace_service(supabase).get(user_id=user.id, workspace_id=workspace_id)
+    _authorize_workspace_access(
+        workspace_id=workspace_id,
+        user=user,
+        supabase=supabase,
+        admin_supabase=admin_supabase,
+    )
 
     snapshot_id = _ensure_analytics_snapshot(
         admin_supabase, str(workspace_id), str(user.id)
@@ -134,7 +155,12 @@ async def get_regeneration_request(
     When status is 'completed', generated_exam_id is populated and the exam
     can be fetched via GET /api/workspaces/{workspace_id}/exams/{generated_exam_id}.
     """
-    _workspace_service(supabase).get(user_id=user.id, workspace_id=workspace_id)
+    _authorize_workspace_access(
+        workspace_id=workspace_id,
+        user=user,
+        supabase=supabase,
+        admin_supabase=admin_supabase,
+    )
 
     resp = (
         admin_supabase.table("regeneration_requests")

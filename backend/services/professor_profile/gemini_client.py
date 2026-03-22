@@ -65,7 +65,7 @@ class GeminiProfessorProfileClient:
         http_client: httpx.Client | None = None,
     ) -> None:
         if api_key is None or not api_key.strip():
-            raise ConfigError("GEMINI_API_KEY is required")
+            raise ConfigError("Gemini API key is required")
 
         self._api_key = api_key.strip()
         self._model_name = model_name.strip()
@@ -94,7 +94,11 @@ class GeminiProfessorProfileClient:
         try:
             return ProfessorProfileBase.model_validate_json(generated_text)
         except Exception as exc:
-            logger.warning("Gemini returned invalid professor profile JSON: %s", generated_text, exc_info=exc)
+            logger.warning(
+                "Gemini returned invalid professor profile JSON for workspace %s",
+                workspace.id,
+                exc_info=exc,
+            )
             raise UpstreamServiceError(
                 "Professor profile generation returned an invalid response schema"
             ) from exc
@@ -170,9 +174,8 @@ class GeminiProfessorProfileClient:
             raise ServiceUnavailableError("Gemini request failed") from exc
         except httpx.HTTPStatusError as exc:
             logger.warning(
-                "Gemini returned an HTTP error while generating a professor profile: %s - Body: %s",
+                "Gemini returned an HTTP error while generating a professor profile: %s",
                 exc.response.status_code,
-                exc.response.text,
                 exc_info=exc,
             )
             raise UpstreamServiceError("Gemini rejected the professor profile request") from exc

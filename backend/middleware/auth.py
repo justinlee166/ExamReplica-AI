@@ -302,9 +302,14 @@ async def _get_signing_jwk(settings: Settings, kid: str, alg: str | None = None)
 
 
 async def get_current_user(
+    request: Request,
     token: str = Depends(get_bearer_token),
     settings: Settings = Depends(get_settings),
 ) -> AuthenticatedUser:
+    cached_user = getattr(request.state, "authenticated_user", None)
+    if isinstance(cached_user, AuthenticatedUser):
+        return cached_user
+
     alg: str | None = None
     kid: str | None = None
     try:
@@ -355,4 +360,6 @@ async def get_current_user(
         _raise_unauthorized("Invalid token subject", alg=alg, kid=kid, exc=exc)
 
     email = payload.get("email")
-    return AuthenticatedUser(id=user_id, email=email if isinstance(email, str) else None)
+    user = AuthenticatedUser(id=user_id, email=email if isinstance(email, str) else None)
+    request.state.authenticated_user = user
+    return user

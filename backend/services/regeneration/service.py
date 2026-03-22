@@ -95,8 +95,12 @@ def run_regeneration_pipeline(
             "Regeneration request %s completed — exam %s created", regen_request_id, exam_id
         )
 
-    except Exception:
-        logger.exception("Regeneration pipeline failed for request %s", regen_request_id)
+    except Exception as exc:
+        logger.error(
+            "Regeneration pipeline failed for request %s with %s",
+            regen_request_id,
+            exc.__class__.__name__,
+        )
         supabase.table("regeneration_requests").update(
             {"request_status": "failed"}
         ).eq("id", regen_request_id).execute()

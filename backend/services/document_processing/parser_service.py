@@ -163,9 +163,10 @@ class DocumentProcessingService:
         try:
             response = self._supabase.table("document_processing_jobs").insert(payload).execute()
         except Exception as exc:
-            self._logger.exception(
-                "Failed to enqueue parsing job for document %s",
+            self._logger.error(
+                "Failed to enqueue parsing job for document %s with %s",
                 document_id,
+                exc.__class__.__name__,
             )
             self._update_document_status(document_id=document_id, status="failed")
             raise AppError("Failed to enqueue document processing") from exc
@@ -266,14 +267,18 @@ class DocumentProcessingService:
         self._update_job(job_id=job_id, payload=payload)
 
     def _mark_job_failed(self, *, job_id: UUID, document_id: UUID, exc: Exception) -> None:
-        self._logger.exception(
-            "Parsing job %s failed for document %s",
+        self._logger.error(
+            "Parsing job %s failed for document %s with %s",
             job_id,
             document_id,
+            exc.__class__.__name__,
         )
         self._update_job(
             job_id=job_id,
-            payload={"status": "failed", "error_message": str(exc)[:1000]},
+            payload={
+                "status": "failed",
+                "error_message": "Document processing failed. Review server logs for details.",
+            },
         )
         self._update_document_status(document_id=document_id, status="failed")
 

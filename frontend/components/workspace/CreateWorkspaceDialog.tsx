@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 
 import { apiClient } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import {
+  getErrorMessage,
+  getValidationErrors,
+  isUnauthorizedError,
+} from "@/lib/errorMessages";
 
 export function CreateWorkspaceDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
@@ -22,11 +29,13 @@ export function CreateWorkspaceDialog({ onCreated }: { onCreated: () => void }) 
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    setFieldErrors({});
     try {
       await apiClient.createWorkspace({
         title,
@@ -39,7 +48,21 @@ export function CreateWorkspaceDialog({ onCreated }: { onCreated: () => void }) 
       setDescription("");
       onCreated();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create workspace");
+      const validationErrors = getValidationErrors(err);
+      if (Object.keys(validationErrors).length > 0) {
+        setFieldErrors(validationErrors);
+      }
+
+      const message = getErrorMessage(err);
+      setError(message);
+      toast({
+        variant: "destructive",
+        title: "Unable to create workspace",
+        description: message,
+      });
+      if (isUnauthorizedError(err)) {
+        window.setTimeout(() => window.location.assign("/login"), 800);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -65,8 +88,12 @@ export function CreateWorkspaceDialog({ onCreated }: { onCreated: () => void }) 
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              disabled={submitting}
               required
             />
+            {fieldErrors.title ? (
+              <p className="text-sm text-destructive">{fieldErrors.title}</p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="courseCode">Course code</Label>
@@ -75,7 +102,11 @@ export function CreateWorkspaceDialog({ onCreated }: { onCreated: () => void }) 
               value={courseCode}
               onChange={(e) => setCourseCode(e.target.value)}
               placeholder="e.g. AMS 310"
+              disabled={submitting}
             />
+            {fieldErrors.course_code ? (
+              <p className="text-sm text-destructive">{fieldErrors.course_code}</p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
@@ -84,17 +115,27 @@ export function CreateWorkspaceDialog({ onCreated }: { onCreated: () => void }) 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Optional"
+              disabled={submitting}
             />
+            {fieldErrors.description ? (
+              <p className="text-sm text-destructive">{fieldErrors.description}</p>
+            ) : null}
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
           <Button type="submit" className="w-full" disabled={submitting}>
-            {submitting ? "Creating..." : "Create"}
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              "Create"
+            )}
           </Button>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
-

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { Bell, Search, ChevronDown } from "lucide-react";
+import { Bell, Search, ChevronDown, PanelLeft, FolderOpenDot } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,10 +19,42 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { useAuthUser } from "@/lib/use-auth-user";
 
-export function AppHeader() {
+function getWorkspaceSectionLabel(pathname: string): string {
+  if (pathname.includes("/generation-requests/")) {
+    return "Generation Status";
+  }
+
+  if (pathname.includes("/generate")) {
+    return "Generate";
+  }
+
+  if (pathname.includes("/insights")) {
+    return "Insights";
+  }
+
+  if (pathname.includes("/exams/")) {
+    return "Exam Viewer";
+  }
+
+  if (pathname.endsWith("/exams")) {
+    return "Exams";
+  }
+
+  if (pathname.includes("/workspaces/")) {
+    return "Materials";
+  }
+
+  return "Dashboard";
+}
+
+export function AppHeader({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { loading, displayName, email, initials, avatarUrl } = useAuthUser();
   const [signingOut, setSigningOut] = useState(false);
+  const activeWorkspaceMatch = pathname.match(/^\/dashboard\/workspaces\/([^/]+)/);
+  const activeWorkspaceId = activeWorkspaceMatch?.[1] ?? null;
+  const sectionLabel = getWorkspaceSectionLabel(pathname);
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -37,10 +70,46 @@ export function AppHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-6 backdrop-blur-xl">
-      {/* Search */}
-      <div className="flex flex-1 items-center gap-4">
-        <div className="relative w-full max-w-md">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-xl md:px-6">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <Button
+          variant="outline"
+          size="icon"
+          className="md:hidden"
+          onClick={onOpenSidebar}
+          aria-label="Open navigation"
+        >
+          <PanelLeft className="h-4 w-4" />
+        </Button>
+
+        <div className="min-w-0 shrink-0">
+          {activeWorkspaceId ? (
+            <div className="flex min-w-0 items-center gap-2">
+              <div className="hidden h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary sm:flex">
+                <FolderOpenDot className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                  Active Workspace
+                </p>
+                <p className="truncate text-sm font-medium text-foreground">
+                  {sectionLabel} · {activeWorkspaceId}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                Workspace Context
+              </p>
+              <p className="truncate text-sm font-medium text-foreground">
+                Select a workspace to access materials and exams
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="relative hidden w-full max-w-md lg:block">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
@@ -53,9 +122,8 @@ export function AppHeader() {
         </div>
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative hidden sm:inline-flex">
           <Bell className="h-5 w-5" />
           <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary" />
         </Button>

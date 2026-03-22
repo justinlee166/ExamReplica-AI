@@ -22,6 +22,17 @@ def _require_single(data: Any, *, not_found_message: str) -> dict[str, Any]:
     raise NotFoundError(not_found_message)
 
 
+def _require_optional_single(data: Any) -> dict[str, Any] | None:
+    if isinstance(data, list):
+        if not data:
+            return None
+        if len(data) == 1 and isinstance(data[0], dict):
+            return data[0]
+    if isinstance(data, dict):
+        return data
+    raise BadRequestError("Unexpected response from database")
+
+
 class WorkspaceService:
     def __init__(self, supabase: Client) -> None:
         self._supabase = supabase
@@ -60,16 +71,17 @@ class WorkspaceService:
         """
         admin_resp = (
             admin_supabase.table("workspaces")
-            .select("user_id")
+            .select("*")
             .eq("id", str(workspace_id))
             .limit(1)
             .execute()
         )
-        if not admin_resp.data:
+        admin_record = _require_optional_single(admin_resp.data)
+        if admin_record is None:
             raise NotFoundError("Workspace not found")
-        if admin_resp.data[0]["user_id"] != str(user_id):
-            raise ForbiddenError("Access denied")
-        return self.get(user_id=user_id, workspace_id=workspace_id)
+        if admin_record["user_id"] != str(user_id):
+            raise ForbiddenError("You don't have permission to access this workspace.")
+        return WorkspaceResponse.model_validate(admin_record)
 
     def get(self, *, user_id: UUID, workspace_id: UUID) -> WorkspaceResponse:
         resp = (

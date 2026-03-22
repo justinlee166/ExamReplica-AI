@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
@@ -21,7 +22,15 @@ const bottomNavigation = [
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({
+  mobile = false,
+  onNavigate,
+  className,
+}: {
+  mobile?: boolean;
+  onNavigate?: () => void;
+  className?: string;
+}) {
   const pathname = usePathname();
   const { loading, displayName, email, initials, avatarUrl } = useAuthUser();
   const activeWorkspaceMatch = pathname.match(/^\/dashboard\/workspaces\/([^/]+)/);
@@ -53,11 +62,19 @@ export function AppSidebar() {
       : []),
   ];
 
+  const rootClassName = mobile
+    ? "flex h-full w-full flex-col border-r border-border bg-sidebar"
+    : "fixed left-0 top-0 z-40 h-screen w-64 flex-col border-r border-border bg-sidebar";
+
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-sidebar">
+    <aside className={cn(rootClassName, className)}>
       <div className="flex h-full flex-col">
         {/* Logo */}
-        <Link href="/dashboard" className="flex h-16 items-center gap-2 border-b border-border px-6">
+        <Link
+          href="/dashboard"
+          className="flex h-16 items-center gap-2 border-b border-border px-6"
+          onClick={onNavigate}
+        >
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
             <GraduationCap className="h-5 w-5 text-primary-foreground" />
           </div>
@@ -73,6 +90,7 @@ export function AppSidebar() {
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={onNavigate}
                 className={cn(
                   "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                   isActive
@@ -110,6 +128,7 @@ export function AppSidebar() {
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={onNavigate}
                 className={cn(
                   "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                   isActive

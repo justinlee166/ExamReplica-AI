@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExamViewer } from "@/components/generation/ExamViewer";
+import { toast } from "@/hooks/use-toast";
+import { getErrorMessage, isUnauthorizedError } from "@/lib/errorMessages";
 
 export default function ExamDetailPage() {
   const router = useRouter();
@@ -45,7 +47,18 @@ export default function ExamDetailPage() {
         if (err instanceof ApiError && err.status === 404) {
           setError("Exam not found.");
         } else {
-          setError(err instanceof Error ? err.message : "Failed to load exam.");
+          setError(getErrorMessage(err));
+        }
+        toast({
+          variant: "destructive",
+          title: "Unable to load exam",
+          description:
+            err instanceof ApiError && err.status === 404
+              ? "Exam not found."
+              : getErrorMessage(err),
+        });
+        if (isUnauthorizedError(err)) {
+          router.replace("/login");
         }
       } finally {
         if (active) setLoading(false);
@@ -59,7 +72,7 @@ export default function ExamDetailPage() {
   }, [workspaceId, examId, router]);
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 md:p-6">
       <div className="space-y-3">
         <Button variant="ghost" asChild className="w-fit px-0 hover:bg-transparent">
           <Link id="exam-back-to-workspace-link" href={`/dashboard/workspaces/${workspaceId}`}>

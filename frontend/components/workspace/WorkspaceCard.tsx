@@ -1,6 +1,9 @@
 "use client";
+
 import { useState } from "react";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,8 +19,16 @@ import { Button } from "@/components/ui/button";
 import type { Workspace } from "@/lib/apiClient";
 import { apiClient } from "@/lib/apiClient";
 import { Card } from "@/components/ui/card";
+import { toast } from "@/hooks/use-toast";
+import { getErrorMessage, isUnauthorizedError } from "@/lib/errorMessages";
 
-export function WorkspaceCard({ workspace }: { workspace: Workspace }) {
+export function WorkspaceCard({
+  workspace,
+  onDeleted,
+}: {
+  workspace: Workspace;
+  onDeleted?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -26,15 +37,27 @@ export function WorkspaceCard({ workspace }: { workspace: Workspace }) {
     try {
       await apiClient.deleteWorkspace(workspace.id);
       setOpen(false);
-      window.location.reload();
+      onDeleted?.();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Unable to delete workspace",
+        description: getErrorMessage(error),
+      });
+      if (isUnauthorizedError(error)) {
+        window.setTimeout(() => window.location.assign("/login"), 800);
+      }
     } finally {
       setDeleting(false);
     }
   }
 
   return (
-    <Card className="p-4 transition-colors hover:border-primary/30">
-      <Link href={`/dashboard/workspaces/${workspace.id}`} className="block space-y-1">
+    <Card className="flex h-full flex-col justify-between p-4 transition-colors hover:border-primary/30">
+      <Link
+        href={`/dashboard/workspaces/${workspace.id}`}
+        className="block space-y-1"
+      >
         <div>
           <p className="font-medium text-foreground">{workspace.title}</p>
           <p className="text-sm text-muted-foreground">
@@ -47,7 +70,9 @@ export function WorkspaceCard({ workspace }: { workspace: Workspace }) {
       </Link>
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogTrigger asChild>
-          <Button className="mt-4" variant="outline" size="sm">Delete</Button>
+          <Button className="mt-4 w-full sm:w-auto" variant="outline" size="sm" disabled={deleting}>
+            Delete
+          </Button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -69,7 +94,14 @@ export function WorkspaceCard({ workspace }: { workspace: Workspace }) {
                   void handleDelete();
                 }}
               >
-                Delete
+                {deleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete"
+                )}
               </Button>
             </AlertDialogAction>
           </AlertDialogFooter>

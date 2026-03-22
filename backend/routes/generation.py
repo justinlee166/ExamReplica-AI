@@ -28,7 +28,9 @@ from backend.services.workspaces.workspace_service import WorkspaceService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["generation"])
+# Auth summary: router-level Depends(get_current_user) enforces Supabase JWT validation.
+# Handlers request AuthenticatedUser for cached identity access and authorize workspace ownership before generation resources are read or written.
+router = APIRouter(tags=["generation"], dependencies=[Depends(get_current_user)])
 
 
 # --- Helpers ---
@@ -36,6 +38,20 @@ router = APIRouter(tags=["generation"])
 
 def _workspace_service(supabase: Client) -> WorkspaceService:
     return WorkspaceService(supabase)
+
+
+def _authorize_workspace_access(
+    *,
+    workspace_id: UUID,
+    user: AuthenticatedUser,
+    supabase: Client,
+    admin_supabase: Client,
+) -> None:
+    _workspace_service(supabase).get_or_forbidden(
+        user_id=user.id,
+        workspace_id=workspace_id,
+        admin_supabase=admin_supabase,
+    )
 
 
 def _require_single(data: Any, *, not_found_message: str) -> dict[str, Any]:
@@ -103,8 +119,12 @@ def _run_generation_job(
 
         logger.info("Generation request %s completed successfully", request_id)
 
-    except Exception:
-        logger.exception("Generation request %s failed", request_id)
+    except Exception as exc:
+        logger.error(
+            "Generation request %s failed with %s",
+            request_id,
+            exc.__class__.__name__,
+        )
         supabase.table("generation_requests").update(
             {"status": "failed"}
         ).eq("id", str(request_id)).execute()
@@ -165,7 +185,12 @@ async def create_generation_request(
     admin_supabase: Client = Depends(get_admin_client),
 ) -> GenerationRequestRead:
     check_rate_limit(user_id=user.id, endpoint="generation", max_calls=5)
-    _workspace_service(supabase).get(user_id=user.id, workspace_id=workspace_id)
+    _authorize_workspace_access(
+        workspace_id=workspace_id,
+        user=user,
+        supabase=supabase,
+        admin_supabase=admin_supabase,
+    )
 
     request_id = uuid4()
     insert_payload = {
@@ -200,8 +225,14 @@ async def get_generation_request(
     request_id: UUID,
     user: AuthenticatedUser = Depends(get_current_user),
     supabase: Client = Depends(get_user_client),
+    admin_supabase: Client = Depends(get_admin_client),
 ) -> GenerationRequestRead:
-    _workspace_service(supabase).get(user_id=user.id, workspace_id=workspace_id)
+    _authorize_workspace_access(
+        workspace_id=workspace_id,
+        user=user,
+        supabase=supabase,
+        admin_supabase=admin_supabase,
+    )
 
     resp = (
         supabase.table("generation_requests")
@@ -223,8 +254,14 @@ async def list_exams(
     workspace_id: UUID,
     user: AuthenticatedUser = Depends(get_current_user),
     supabase: Client = Depends(get_user_client),
+    admin_supabase: Client = Depends(get_admin_client),
 ) -> list[GeneratedExamSummary]:
-    _workspace_service(supabase).get(user_id=user.id, workspace_id=workspace_id)
+    _authorize_workspace_access(
+        workspace_id=workspace_id,
+        user=user,
+        supabase=supabase,
+        admin_supabase=admin_supabase,
+    )
 
     resp = (
         supabase.table("generated_exams")
@@ -246,8 +283,14 @@ async def get_exam_detail(
     exam_id: UUID,
     user: AuthenticatedUser = Depends(get_current_user),
     supabase: Client = Depends(get_user_client),
+    admin_supabase: Client = Depends(get_admin_client),
 ) -> GeneratedExamDetail:
-    _workspace_service(supabase).get(user_id=user.id, workspace_id=workspace_id)
+    _authorize_workspace_access(
+        workspace_id=workspace_id,
+        user=user,
+        supabase=supabase,
+        admin_supabase=admin_supabase,
+    )
 
     exam_resp = (
         supabase.table("generated_exams")
@@ -286,14 +329,21 @@ async def export_exam_pdf(
     user: AuthenticatedUser = Depends(get_current_user),
     settings: Settings = Depends(get_settings),
     supabase: Client = Depends(get_user_client),
+    admin_supabase: Client = Depends(get_admin_client),
 ) -> FileResponse:
-    _workspace_service(supabase).get(user_id=user.id, workspace_id=workspace_id)
+    _authorize_workspace_access(
+        workspace_id=workspace_id,
+        user=user,
+        supabase=supabase,
+        admin_supabase=admin_supabase,
+    )
 
     exam_detail = await get_exam_detail(
         workspace_id=workspace_id,
         exam_id=exam_id,
         user=user,
         supabase=supabase,
+        admin_supabase=admin_supabase,
     )
 
     assembly = FinalExamAssembly(

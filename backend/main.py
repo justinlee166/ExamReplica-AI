@@ -20,6 +20,7 @@ from backend.routes.workspaces import router as workspaces_router
 
 
 def create_app(settings: Settings) -> FastAPI:
+    settings.validate_required_secrets()
     app = FastAPI(title="ExamProfile AI API")
 
     app.add_middleware(

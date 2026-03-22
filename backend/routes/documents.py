@@ -9,13 +9,29 @@ from backend.config.settings import Settings, get_settings
 from backend.config.supabase_client import get_admin_client, get_user_client
 from backend.middleware.auth import AuthenticatedUser, get_current_user
 from backend.models.document import DocumentResponse, SourceType
+from backend.models.errors import PayloadTooLargeError, UnsupportedMediaTypeError
 from backend.services.document_processing.embedding_service import build_embedding_service
 from backend.services.document_processing.parser_service import DocumentProcessingService
 from backend.services.documents.document_service import DocumentService
 from backend.services.retrieval.vector_store import ChromaVectorStore
 from backend.services.storage.file_storage import FileStorage, build_file_storage
+from backend.services.workspaces.workspace_service import WorkspaceService
 
-router = APIRouter(prefix="/workspaces/{workspace_id}/documents", tags=["documents"])
+_ALLOWED_UPLOAD_MIME_TYPES = {
+    "application/pdf",
+    "text/plain",
+    "text/markdown",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+_MAX_UPLOAD_SIZE_BYTES = 25 * 1024 * 1024
+
+# Auth summary: router-level Depends(get_current_user) enforces Supabase JWT validation.
+# Handlers request AuthenticatedUser for cached identity access and authorize workspace ownership before nested document access.
+router = APIRouter(
+    prefix="/workspaces/{workspace_id}/documents",
+    tags=["documents"],
+    dependencies=[Depends(get_current_user)],
+)
 
 
 def _storage(settings: Settings, supabase: Client) -> FileStorage:
@@ -29,6 +45,10 @@ def _storage(settings: Settings, supabase: Client) -> FileStorage:
 
 def _service(supabase: Client) -> DocumentService:
     return DocumentService(supabase)
+
+
+def _workspace_service(supabase: Client) -> WorkspaceService:
+    return WorkspaceService(supabase)
 
 
 def _vector_store(settings: Settings) -> ChromaVectorStore:
@@ -47,6 +67,40 @@ def _processing_service(settings: Settings, supabase: Client) -> DocumentProcess
     )
 
 
+def _authorize_workspace_access(
+    *,
+    workspace_id: UUID,
+    user: AuthenticatedUser,
+    supabase: Client,
+    admin_supabase: Client,
+) -> None:
+    _workspace_service(supabase).get_or_forbidden(
+        user_id=user.id,
+        workspace_id=workspace_id,
+        admin_supabase=admin_supabase,
+    )
+
+
+async def _validate_upload_security(upload: UploadFile) -> None:
+    content_type = (upload.content_type or "").split(";", maxsplit=1)[0].strip().lower()
+    if content_type not in _ALLOWED_UPLOAD_MIME_TYPES:
+        raise UnsupportedMediaTypeError(
+            "Unsupported file type. Allowed types: PDF, TXT, Markdown, DOCX."
+        )
+
+    total_size = 0
+    while True:
+        chunk = await upload.read(1024 * 1024)
+        if not chunk:
+            break
+        total_size += len(chunk)
+        if total_size > _MAX_UPLOAD_SIZE_BYTES:
+            await upload.seek(0)
+            raise PayloadTooLargeError("File size exceeds the 25MB upload limit.")
+
+    await upload.seek(0)
+
+
 @router.post("", status_code=201, response_model=DocumentResponse)
 async def upload_document(
     workspace_id: UUID,
@@ -59,6 +113,13 @@ async def upload_document(
     supabase: Client = Depends(get_user_client),
     admin_supabase: Client = Depends(get_admin_client),
 ) -> DocumentResponse:
+    _authorize_workspace_access(
+        workspace_id=workspace_id,
+        user=user,
+        supabase=supabase,
+        admin_supabase=admin_supabase,
+    )
+    await _validate_upload_security(file)
     storage = _storage(settings, supabase)
     document = await _service(supabase).create(
         user_id=user.id,
@@ -79,7 +140,14 @@ async def list_documents(
     workspace_id: UUID,
     user: AuthenticatedUser = Depends(get_current_user),
     supabase: Client = Depends(get_user_client),
+    admin_supabase: Client = Depends(get_admin_client),
 ) -> list[DocumentResponse]:
+    _authorize_workspace_access(
+        workspace_id=workspace_id,
+        user=user,
+        supabase=supabase,
+        admin_supabase=admin_supabase,
+    )
     return _service(supabase).list(user_id=user.id, workspace_id=workspace_id)
 
 
@@ -89,7 +157,14 @@ async def get_document(
     document_id: UUID,
     user: AuthenticatedUser = Depends(get_current_user),
     supabase: Client = Depends(get_user_client),
+    admin_supabase: Client = Depends(get_admin_client),
 ) -> DocumentResponse:
+    _authorize_workspace_access(
+        workspace_id=workspace_id,
+        user=user,
+        supabase=supabase,
+        admin_supabase=admin_supabase,
+    )
     return _service(supabase).get(
         user_id=user.id, workspace_id=workspace_id, document_id=document_id
     )
@@ -102,7 +177,14 @@ async def delete_document(
     user: AuthenticatedUser = Depends(get_current_user),
     settings: Settings = Depends(get_settings),
     supabase: Client = Depends(get_user_client),
+    admin_supabase: Client = Depends(get_admin_client),
 ) -> None:
+    _authorize_workspace_access(
+        workspace_id=workspace_id,
+        user=user,
+        supabase=supabase,
+        admin_supabase=admin_supabase,
+    )
     storage = _storage(settings, supabase)
     DocumentService(supabase, vector_store=_vector_store(settings)).delete(
         user_id=user.id, workspace_id=workspace_id, document_id=document_id, storage=storage

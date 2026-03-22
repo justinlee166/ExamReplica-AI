@@ -20,11 +20,27 @@ from backend.services.workspaces.workspace_service import WorkspaceService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["analytics"])
+# Auth summary: router-level Depends(get_current_user) enforces Supabase JWT validation.
+# Handlers request AuthenticatedUser for cached identity access and authorize workspace ownership before analytics access.
+router = APIRouter(tags=["analytics"], dependencies=[Depends(get_current_user)])
 
 
 def _workspace_service(supabase: Client) -> WorkspaceService:
     return WorkspaceService(supabase)
+
+
+def _authorize_workspace_access(
+    *,
+    workspace_id: UUID,
+    user: AuthenticatedUser,
+    supabase: Client,
+    admin_supabase: Client,
+) -> None:
+    _workspace_service(supabase).get_or_forbidden(
+        user_id=user.id,
+        workspace_id=workspace_id,
+        admin_supabase=admin_supabase,
+    )
 
 
 def _to_response(result: object) -> AnalyticsResponse:
@@ -64,7 +80,12 @@ async def get_analytics(
     Returns an empty analytics object (not 404) when no graded submissions exist.
     Persists an analytics_snapshots row on every fetch (fire-and-forget).
     """
-    _workspace_service(supabase).get(user_id=user.id, workspace_id=workspace_id)
+    _authorize_workspace_access(
+        workspace_id=workspace_id,
+        user=user,
+        supabase=supabase,
+        admin_supabase=admin_supabase,
+    )
 
     service = build_analytics_service(admin_supabase)
     result = service.compute_analytics(str(workspace_id), str(user.id))
@@ -72,7 +93,11 @@ async def get_analytics(
     # Persist snapshot — non-fatal if it fails
     try:
         persist_analytics_snapshot(admin_supabase, str(workspace_id), str(user.id), result)
-    except Exception:
-        logger.exception("Failed to persist analytics snapshot for workspace %s", workspace_id)
+    except Exception as exc:
+        logger.error(
+            "Failed to persist analytics snapshot for workspace %s with %s",
+            workspace_id,
+            exc.__class__.__name__,
+        )
 
     return _to_response(result)

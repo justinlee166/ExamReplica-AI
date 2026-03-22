@@ -25,7 +25,9 @@ from backend.services.workspaces.workspace_service import WorkspaceService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["submissions"])
+# Auth summary: router-level Depends(get_current_user) enforces Supabase JWT validation.
+# Handlers request AuthenticatedUser for cached identity access and authorize workspace ownership before submission resources are read or written.
+router = APIRouter(tags=["submissions"], dependencies=[Depends(get_current_user)])
 
 
 # --- Helpers ---
@@ -33,6 +35,20 @@ router = APIRouter(tags=["submissions"])
 
 def _workspace_service(supabase: Client) -> WorkspaceService:
     return WorkspaceService(supabase)
+
+
+def _authorize_workspace_access(
+    *,
+    workspace_id: UUID,
+    user: AuthenticatedUser,
+    supabase: Client,
+    admin_supabase: Client,
+) -> None:
+    _workspace_service(supabase).get_or_forbidden(
+        user_id=user.id,
+        workspace_id=workspace_id,
+        admin_supabase=admin_supabase,
+    )
 
 
 def _require_single(data: Any, *, not_found_message: str) -> dict[str, Any]:
@@ -110,8 +126,12 @@ def _run_grading_job(
 
         logger.info("Submission %s graded successfully", submission_id)
 
-    except Exception:
-        logger.exception("Grading failed for submission %s", submission_id)
+    except Exception as exc:
+        logger.error(
+            "Grading failed for submission %s with %s",
+            submission_id,
+            exc.__class__.__name__,
+        )
         supabase.table("submissions").update(
             {"status": "failed"}
         ).eq("id", str(submission_id)).execute()
@@ -135,7 +155,12 @@ async def create_submission(
     supabase: Client = Depends(get_user_client),
     admin_supabase: Client = Depends(get_admin_client),
 ) -> SubmissionCreatedResponse:
-    _workspace_service(supabase).get(user_id=user.id, workspace_id=workspace_id)
+    _authorize_workspace_access(
+        workspace_id=workspace_id,
+        user=user,
+        supabase=supabase,
+        admin_supabase=admin_supabase,
+    )
 
     # Verify the exam exists in this workspace
     exam_resp = (
@@ -191,8 +216,14 @@ async def get_submission(
     submission_id: UUID,
     user: AuthenticatedUser = Depends(get_current_user),
     supabase: Client = Depends(get_user_client),
+    admin_supabase: Client = Depends(get_admin_client),
 ) -> SubmissionRead:
-    _workspace_service(supabase).get(user_id=user.id, workspace_id=workspace_id)
+    _authorize_workspace_access(
+        workspace_id=workspace_id,
+        user=user,
+        supabase=supabase,
+        admin_supabase=admin_supabase,
+    )
 
     # Fetch submission
     sub_resp = (

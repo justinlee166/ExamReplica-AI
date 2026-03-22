@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExamList } from "@/components/generation/ExamList";
+import { toast } from "@/hooks/use-toast";
+import { getErrorMessage, isUnauthorizedError } from "@/lib/errorMessages";
 
 export default function ExamListPage() {
   const router = useRouter();
@@ -41,7 +43,16 @@ export default function ExamListPage() {
         setExams(result);
       } catch (err) {
         if (!active) return;
-        setError(err instanceof Error ? err.message : "Failed to load exams.");
+        const message = getErrorMessage(err);
+        setError(message);
+        toast({
+          variant: "destructive",
+          title: "Unable to load exams",
+          description: message,
+        });
+        if (isUnauthorizedError(err)) {
+          router.replace("/login");
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -54,7 +65,7 @@ export default function ExamListPage() {
   }, [workspaceId, router]);
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-3">
           <Button variant="ghost" asChild className="w-fit px-0 hover:bg-transparent">
