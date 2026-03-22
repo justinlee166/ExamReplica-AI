@@ -15,7 +15,7 @@
 
 ## Current Development Phase
 
-Current phase is defined in `docs/IMPLEMENTATION_PHASES.md`. You are currently on **Phase 5 — Grading**.
+Current phase is defined in `docs/IMPLEMENTATION_PHASES.md`. You are currently on **Phase 6 — Analytics + regeneration**.
 
 The system is being implemented sequentially:
 
