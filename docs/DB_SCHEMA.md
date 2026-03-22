@@ -159,7 +159,7 @@ Versioned snapshots of inferred tendencies. New version created when materials c
 
 ## Generation and Exam Entities
 
-> **Migration:** `migrations/008_generation_tables.sql` — creates `generation_requests`, `generated_exams`, `generated_questions` with CHECK constraints and RLS policies scoped to workspace owner.
+> **Migration:** `migrations/008_generation_tables.sql` — creates `generation_requests`, `generated_exams`, `generated_questions` with CHECK constraints and RLS policies scoped to workspace owner. `migrations/010_generated_questions_options.sql` — adds the `options` JSONB column to `generated_questions`.
 
 ### `generation_requests`
 
@@ -205,6 +205,7 @@ Individual questions within a generated exam.
 | `topic_label` | VARCHAR | |
 | `answer_key` | TEXT | Expected answer or rubric |
 | `explanation` | TEXT | Optional |
+| `options` | JSONB | Ordered MCQ answer-choice strings; `[]` for non-MCQ. Added in migration 010. |
 | `created_at` | TIMESTAMP | |
 
 ---
