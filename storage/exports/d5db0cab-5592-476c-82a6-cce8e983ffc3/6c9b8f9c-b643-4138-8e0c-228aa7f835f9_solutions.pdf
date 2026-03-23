@@ -1,0 +1,213 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 2431 >>
+stream
+BT
+/F1 12 Tf
+14 TL
+72 720 Td
+(Practice: HTTP Performance & Persistence, DNS Resolution Mechanics, Network Performance Metrics) Tj
+T*
+() Tj
+T*
+(Question 1) Tj
+T*
+(In the DNS iterative resolution process, when a local DNS server queries a Root DNS) Tj
+T*
+(server for the IP address of 'www.example.com', what is the typical response from the) Tj
+T*
+(Root DNS server?) Tj
+T*
+() Tj
+T*
+(A. The final IP address of 'www.example.com') Tj
+T*
+(B. The IP address of the TLD server responsible for the '.com' domain) Tj
+T*
+(C. The IP address of the Authoritative server for 'example.com') Tj
+T*
+(D. A notification that it has forwarded the request to the TLD server recursively) Tj
+T*
+() Tj
+T*
+(Answer: B) Tj
+T*
+() Tj
+T*
+(Solution:) Tj
+T*
+(In an iterative DNS query, the Root server does not resolve the name itself. Instead, it) Tj
+T*
+(refers the local DNS server to the TLD server responsible for the suffix \(e.g., .com\),) Tj
+T*
+(which is the next step in the hierarchy.) Tj
+T*
+() Tj
+T*
+(Question 2) Tj
+T*
+(How does the use of HTTP/1.1 persistent connections without pipelining affect the) Tj
+T*
+(retrieval of multiple objects from the same server compared to non-persistent HTTP?) Tj
+T*
+() Tj
+T*
+(A. It allows the client to use UDP for faster image transport while keeping HTML on TCP.) Tj
+T*
+(B. It enables the client to send all requests simultaneously without waiting for any) Tj
+T*
+(responses.) Tj
+T*
+(C. It keeps the TCP connection open, saving the RTT associated with the TCP handshake) Tj
+T*
+(for subsequent objects.) Tj
+T*
+(D. It reduces the size of the HTTP request headers by using binary compression.) Tj
+T*
+() Tj
+T*
+(Answer: C) Tj
+T*
+() Tj
+T*
+(Solution:) Tj
+T*
+(Persistent connections allow the TCP connection to remain open after an object is sent,) Tj
+T*
+(which eliminates the 1 RTT overhead of the TCP handshake for all subsequent objects) Tj
+T*
+(requested from the same server.) Tj
+T*
+() Tj
+T*
+(Question 3) Tj
+T*
+(During the DNS resolution process, which of the following best describes the primary) Tj
+T*
+(responsibility of an Authoritative DNS Server?) Tj
+T*
+() Tj
+T*
+(A. It acts as the primary cache for the local ISP's users.) Tj
+T*
+(B. It resolves top-level domains like .com and .net into IP addresses.) Tj
+T*
+(C. It performs the recursive search on behalf of the client's resolver.) Tj
+T*
+(D. It provides the definitive mapping of a hostname to an IP address for a specific) Tj
+T*
+(organization's domain.) Tj
+T*
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 1764 >>
+stream
+BT
+/F1 12 Tf
+14 TL
+72 720 Td
+() Tj
+T*
+(Answer: D) Tj
+T*
+() Tj
+T*
+(Solution:) Tj
+T*
+(The Authoritative DNS server is the final step in the resolution chain; it holds the) Tj
+T*
+(actual resource records \(like A, AAAA, or MX\) that map the specific hostname to its) Tj
+T*
+(corresponding IP address.) Tj
+T*
+() Tj
+T*
+(Question 4) Tj
+T*
+(A client requests a base HTML file and 4 small embedded images from a server. The Round) Tj
+T*
+(Trip Time \(RTT\) between the client and server is 40 ms. The transmission time for the) Tj
+T*
+(HTML file is 2 ms, and the transmission time for each image is 1 ms. Assuming non-) Tj
+T*
+(persistent HTTP with no parallel connections, calculate the total time \(in ms\) from the) Tj
+T*
+(start of the first TCP connection until the last image is fully received. Ignore DNS) Tj
+T*
+(lookup time.) Tj
+T*
+() Tj
+T*
+(Answer: 406) Tj
+T*
+() Tj
+T*
+(Solution:) Tj
+T*
+(For non-persistent HTTP, each object requires a TCP handshake \(1 RTT\) and then the) Tj
+T*
+(request/response \(1 RTT + transmission time\). Total time = \(1 HTML * \(2 * 40ms + 2ms\)\) +) Tj
+T*
+(\(4 images * \(2 * 40ms + 1ms\)\) = 82ms + 4 * 81ms = 82ms + 324ms = 406ms.) Tj
+T*
+() Tj
+T*
+(Question 5) Tj
+T*
+(A packet of size 1500 bytes is sent over a 500 km link with a transmission rate of 10) Tj
+T*
+(Mbps. If the propagation speed is 2.5 * 10^8 m/s, calculate the total delay) Tj
+T*
+(\(transmission + propagation\) in milliseconds. Round your answer to two decimal places.) Tj
+T*
+() Tj
+T*
+(Answer: 3.20) Tj
+T*
+() Tj
+T*
+(Solution:) Tj
+T*
+(Transmission delay = L/R = \(1500 * 8 bits\) / \(10 * 10^6 bps\) = 0.0012s = 1.2ms.) Tj
+T*
+(Propagation delay = d/s = \(500,000m\) / \(250,000,000 m/s\) = 0.002s = 2.0ms. Total nodal) Tj
+T*
+(delay = 1.2ms + 2.0ms = 3.2ms.) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000191 00000 n 
+0000000317 00000 n 
+0000002800 00000 n 
+0000002926 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+4742
+%%EOF

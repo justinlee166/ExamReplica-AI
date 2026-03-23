@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 import os
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from backend.models.errors import ConfigError
@@ -21,7 +23,10 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str | None = None
     supabase_jwt_audience: str | None = None
 
-    cors_allow_origins: list[str] = ["http://localhost:3000"]
+    cors_allow_origins: list[str] = Field(
+        default_factory=lambda: ["http://localhost:3000"],
+        validation_alias="CORS_ALLOW_ORIGINS",
+    )
 
     storage_backend: Literal["local", "supabase"] = "local"
     local_storage_root: str = "./storage"
@@ -37,8 +42,25 @@ class Settings(BaseSettings):
     gemini_api_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
     gemini_timeout_seconds: float = 120.0
 
-    chroma_persist_directory: str = "./storage/chromadb"
+    chroma_persist_directory: str = Field(
+        default="./storage/chromadb",
+        validation_alias="CHROMA_PERSIST_PATH",
+    )
     chroma_collection_name: str = "document_chunks"
+
+    @field_validator("cors_allow_origins", mode="before")
+    @classmethod
+    def _parse_cors_allow_origins(cls, value: object) -> object:
+        if isinstance(value, str):
+            normalized = value.strip()
+            if not normalized:
+                return ["http://localhost:3000"]
+            if normalized.startswith("["):
+                parsed = json.loads(normalized)
+                if isinstance(parsed, list):
+                    return [str(item).strip() for item in parsed if str(item).strip()]
+            return [origin.strip() for origin in normalized.split(",") if origin.strip()]
+        return value
 
     def validate_required_secrets(self) -> None:
         missing: list[str] = []

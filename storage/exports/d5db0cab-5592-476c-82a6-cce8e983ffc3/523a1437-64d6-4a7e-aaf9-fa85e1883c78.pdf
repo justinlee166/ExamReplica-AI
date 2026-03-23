@@ -1,0 +1,116 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 2033 >>
+stream
+BT
+/F1 12 Tf
+14 TL
+72 720 Td
+(Practice: HTTP Performance & Persistence, DNS Resolution Mechanics, Network Performance Metrics) Tj
+T*
+() Tj
+T*
+(Question 1) Tj
+T*
+(In a DNS resolution process using iterative queries, if a local DNS server needs to) Tj
+T*
+(resolve a hostname and the mapping is not in its cache, it contacts a Root server, then) Tj
+T*
+(a TLD server, and finally an Authoritative server. How many DNS query/response pairs are) Tj
+T*
+(exchanged in total by the local DNS server to resolve this name?) Tj
+T*
+() Tj
+T*
+(A. 1) Tj
+T*
+(B. 3) Tj
+T*
+(C. 6) Tj
+T*
+(D. 4) Tj
+T*
+() Tj
+T*
+(Question 2) Tj
+T*
+(Under HTTP/1.1, a client sends a request with the 'If-Modified-Since' header. If the) Tj
+T*
+(object on the server has not been updated since the timestamp provided, what is the) Tj
+T*
+(expected response from the server?) Tj
+T*
+() Tj
+T*
+(A. 200 OK with the object in the body) Tj
+T*
+(B. 404 Not Found) Tj
+T*
+(C. 304 Not Modified with an empty body) Tj
+T*
+(D. 403 Forbidden) Tj
+T*
+() Tj
+T*
+(Question 3) Tj
+T*
+(A client requests a base HTML file which references 6 small images. The RTT between the) Tj
+T*
+(client and server is 40 ms. The transmission time for each object \(HTML and images\) is 1) Tj
+T*
+(ms. Assuming HTTP/1.1 with persistent connections and no pipelining, calculate the total) Tj
+T*
+(time \(in milliseconds\) from the initial TCP connection request until all objects are) Tj
+T*
+(received.) Tj
+T*
+() Tj
+T*
+(Question 4) Tj
+T*
+(Consider a link with a distance of 4,000 km and a propagation speed of 2 * 10^8 m/s. The) Tj
+T*
+(bandwidth of the link is 100 Mbps. Calculate the total delay in milliseconds) Tj
+T*
+(\(propagation + transmission\) for a single packet of size 1,250,000 bytes.) Tj
+T*
+() Tj
+T*
+(Question 5) Tj
+T*
+(Explain the difference between persistent connections with pipelining and persistent) Tj
+T*
+(connections without pipelining in HTTP/1.1. Specifically, how does pipelining affect the) Tj
+T*
+(number of RTTs required to fetch N objects after the base HTML file is received?) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000185 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+2396
+%%EOF

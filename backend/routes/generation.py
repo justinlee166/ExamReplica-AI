@@ -121,9 +121,11 @@ def _run_generation_job(
 
     except Exception as exc:
         logger.error(
-            "Generation request %s failed with %s",
+            "Generation request %s failed with %s: %s",
             request_id,
             exc.__class__.__name__,
+            str(exc),
+            exc_info=True,
         )
         supabase.table("generation_requests").update(
             {"status": "failed"}

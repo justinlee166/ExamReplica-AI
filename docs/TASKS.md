@@ -399,6 +399,18 @@
   - Upload validation rejects unsupported MIME types with 415 and files larger than 25 MB with 413 before storage write
   - INFO/ERROR logging avoids user-submitted content, tokens, and upstream response bodies
 
+### T-704: Deployment + Documentation + Smoke Tests
+- **Phase:** 7
+- **Status:** Complete
+- **Goal:** Prepare the app for staging deployment, document the full setup flow, and add a standalone smoke test for the core loop
+- **Acceptance Criteria:**
+  - `frontend/vercel.json` and `backend/render.yaml` exist with deploy-ready build/runtime settings
+  - `frontend/.env.example` and `backend/.env.example` document every required environment variable
+  - `backend/config/settings.py` supports comma-separated `CORS_ALLOW_ORIGINS` and configurable `CHROMA_PERSIST_PATH`
+  - `README.md` covers local development, migrations, tests, and deployment
+  - `docs/DEPLOYMENT.md` provides a step-by-step staging deployment guide
+  - `backend/scripts/smoke_test.py` exercises the health -> workspace -> profile -> generation -> submission -> analytics -> cleanup loop and exits non-zero on failure
+
 ## Future Phases
 
 Tasks for remaining Phase 7 items and beyond will be added as work continues. Refer to `IMPLEMENTATION_PHASES.md` for phase definitions and deliverables.

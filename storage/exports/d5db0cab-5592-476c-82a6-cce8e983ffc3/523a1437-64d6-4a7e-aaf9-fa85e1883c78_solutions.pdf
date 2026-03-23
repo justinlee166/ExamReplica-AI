@@ -1,0 +1,217 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 2153 >>
+stream
+BT
+/F1 12 Tf
+14 TL
+72 720 Td
+(Practice: HTTP Performance & Persistence, DNS Resolution Mechanics, Network Performance Metrics) Tj
+T*
+() Tj
+T*
+(Question 1) Tj
+T*
+(In a DNS resolution process using iterative queries, if a local DNS server needs to) Tj
+T*
+(resolve a hostname and the mapping is not in its cache, it contacts a Root server, then) Tj
+T*
+(a TLD server, and finally an Authoritative server. How many DNS query/response pairs are) Tj
+T*
+(exchanged in total by the local DNS server to resolve this name?) Tj
+T*
+() Tj
+T*
+(A. 1) Tj
+T*
+(B. 3) Tj
+T*
+(C. 6) Tj
+T*
+(D. 4) Tj
+T*
+() Tj
+T*
+(Answer: B) Tj
+T*
+() Tj
+T*
+(Solution:) Tj
+T*
+(In iterative resolution, the local DNS server takes the burden of the resolution. It) Tj
+T*
+(first queries the Root server \(1 pair\), then the TLD server \(1 pair\), and finally the) Tj
+T*
+(Authoritative server \(1 pair\). This results in 3 distinct query/response pairs initiated) Tj
+T*
+(by the local DNS server.) Tj
+T*
+() Tj
+T*
+(Question 2) Tj
+T*
+(Under HTTP/1.1, a client sends a request with the 'If-Modified-Since' header. If the) Tj
+T*
+(object on the server has not been updated since the timestamp provided, what is the) Tj
+T*
+(expected response from the server?) Tj
+T*
+() Tj
+T*
+(A. 200 OK with the object in the body) Tj
+T*
+(B. 404 Not Found) Tj
+T*
+(C. 304 Not Modified with an empty body) Tj
+T*
+(D. 403 Forbidden) Tj
+T*
+() Tj
+T*
+(Answer: C) Tj
+T*
+() Tj
+T*
+(Solution:) Tj
+T*
+(The 'If-Modified-Since' header is used for conditional GET requests. If the server) Tj
+T*
+(determines the object has not changed, it sends a '304 Not Modified' response, which) Tj
+T*
+(tells the client to use its cached copy, saving bandwidth by not sending the object) Tj
+T*
+(body.) Tj
+T*
+() Tj
+T*
+(Question 3) Tj
+T*
+(A client requests a base HTML file which references 6 small images. The RTT between the) Tj
+T*
+(client and server is 40 ms. The transmission time for each object \(HTML and images\) is 1) Tj
+T*
+(ms. Assuming HTTP/1.1 with persistent connections and no pipelining, calculate the total) Tj
+T*
+(time \(in milliseconds\) from the initial TCP connection request until all objects are) Tj
+T*
+(received.) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 2085 >>
+stream
+BT
+/F1 12 Tf
+14 TL
+72 720 Td
+(Answer: 327) Tj
+T*
+() Tj
+T*
+(Solution:) Tj
+T*
+(The process involves: 1 RTT for TCP handshake, 1 RTT for the base HTML file, and 6 RTTs) Tj
+T*
+(for the 6 images \(since there is no pipelining, each object requires its own RTT\). Total) Tj
+T*
+(RTTs = 1 + 1 + 6 = 8. Total RTT time = 8 * 40ms = 320ms. There are 7 objects total \(1) Tj
+T*
+(HTML + 6 images\), each with a transmission time of 1ms. Total transmission time = 7 *) Tj
+T*
+(1ms = 7ms. Total time = 320ms + 7ms = 327ms.) Tj
+T*
+() Tj
+T*
+(Question 4) Tj
+T*
+(Consider a link with a distance of 4,000 km and a propagation speed of 2 * 10^8 m/s. The) Tj
+T*
+(bandwidth of the link is 100 Mbps. Calculate the total delay in milliseconds) Tj
+T*
+(\(propagation + transmission\) for a single packet of size 1,250,000 bytes.) Tj
+T*
+() Tj
+T*
+(Answer: 120) Tj
+T*
+() Tj
+T*
+(Solution:) Tj
+T*
+(Propagation delay = Distance / Speed = 4,000,000 m / \(2 * 10^8 m/s\) = 0.02 seconds = 20) Tj
+T*
+(ms. Transmission delay = Packet Size / Bandwidth = \(1,250,000 bytes * 8 bits/byte\) /) Tj
+T*
+(100,000,000 bps = 10,000,000 / 100,000,000 = 0.1 seconds = 100 ms. Total delay = 20 ms +) Tj
+T*
+(100 ms = 120 ms.) Tj
+T*
+() Tj
+T*
+(Question 5) Tj
+T*
+(Explain the difference between persistent connections with pipelining and persistent) Tj
+T*
+(connections without pipelining in HTTP/1.1. Specifically, how does pipelining affect the) Tj
+T*
+(number of RTTs required to fetch N objects after the base HTML file is received?) Tj
+T*
+() Tj
+T*
+(Answer: Without pipelining, the client must wait for a response before sending the next) Tj
+T*
+(request, resulting in N RTTs for N objects. With pipelining, the client sends requests) Tj
+T*
+(for all N objects back-to-back as soon as they are identified, ideally resulting in only) Tj
+T*
+(1 RTT for all N objects.) Tj
+T*
+() Tj
+T*
+(Solution:) Tj
+T*
+(Pipelining allows multiple HTTP requests to be sent over a single TCP connection without) Tj
+T*
+(waiting for the corresponding responses. This reduces the impact of RTT on the total) Tj
+T*
+(fetch time for multiple objects.) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000191 00000 n 
+0000000317 00000 n 
+0000002522 00000 n 
+0000002648 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+4785
+%%EOF
